@@ -17,6 +17,7 @@
  */
 
 #include "PlayerbotClassAI.h"
+#include "RaidEnhancement.h"
 #include "Common.h"
 
 #include "Grids/Cell.h"
@@ -41,12 +42,29 @@ CombatManeuverReturns PlayerbotClassAI::DoFirstCombatManeuver(Unit*) { return RE
 CombatManeuverReturns PlayerbotClassAI::DoNextCombatManeuver(Unit*) { return RETURN_NO_ACTION_OK; }
 
 CombatManeuverReturns PlayerbotClassAI::DoFirstCombatManeuverPVE(Unit*) { return RETURN_NO_ACTION_OK; }
-CombatManeuverReturns PlayerbotClassAI::DoNextCombatManeuverPVE(Unit*) { return RETURN_NO_ACTION_OK; }
+CombatManeuverReturns PlayerbotClassAI::DoNextCombatManeuverPVE(Unit*) {
+    /* ===== PARCHE-IA-RAID A: motor de combate de raid ===== */
+    {
+        int r = raidai::CombatHook(m_bot, m_master, *pTarget, (uint32)GetBotJob(&m_bot));
+        if (r == 1)
+            return RETURN_NO_ACTION_OK;   /* frenado por la regla del 80 % de amenaza */
+        if (r == 2)
+        {
+            float hx, hy, hz, hr;
+            if (raidai::GetNearestHazard(m_bot.GetPositionX(), m_bot.GetPositionY(), hx, hy, hz, hr))
+                if (FleeFromPointIfCan((uint32)hr, pTarget, hx, hy, hz))
+                    return RETURN_NO_ACTION_OK;   /* huyendo de la zona hostil */
+        }
+    }
+    /* ===== FIN PARCHE-IA-RAID A ===== */ return RETURN_NO_ACTION_OK; }
 CombatManeuverReturns PlayerbotClassAI::DoFirstCombatManeuverPVP(Unit*) { return RETURN_NO_ACTION_OK; }
 CombatManeuverReturns PlayerbotClassAI::DoNextCombatManeuverPVP(Unit*) { return RETURN_NO_ACTION_OK; }
 
 void PlayerbotClassAI::DoNonCombatActions()
 {
+    /* ===== PARCHE-IA-RAID B: no-combate (consumibles, pull, telemetria) ===== */
+    raidai::NonCombatHook(m_bot, m_master, *this);
+    /* ===== FIN PARCHE-IA-RAID B ===== */
     DEBUG_LOG("[PlayerbotAI]: Warning: Using PlayerbotClassAI::DoNonCombatActions() rather than class specific function");
 }
 

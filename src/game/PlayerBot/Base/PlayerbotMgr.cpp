@@ -20,6 +20,7 @@
 #include "Server/WorldPacket.h"
 #include "PlayerbotAI.h"
 #include "PlayerbotMgr.h"
+#include "RaidEnhancement.h"
 #include "../config.h"
 #include "../../Chat/Chat.h"
 #include "../../Entities/GossipDef.h"
@@ -88,6 +89,30 @@ void PlayerbotMgr::UpdateAI(const uint32 /*diff*/) {}
 
 void PlayerbotMgr::HandleMasterIncomingPacket(const WorldPacket& packet)
 {
+    /* ===== PARCHE-IA-RAID C: comandos de raid por susurro ===== */
+    if (packet.GetOpcode() == CMSG_MESSAGECHAT)
+    {
+        WorldPacket copia(packet);
+        copia.rpos(0);
+        uint32 tipoChat = 0, langChat = 0;
+        copia >> tipoChat >> langChat;
+        if (tipoChat == CHAT_MSG_WHISPER)
+        {
+            ObjectGuid receptor;
+            std::string texto;
+            copia >> receptor >> texto;
+            if (!texto.empty() && texto[0] == '!')
+            {
+                for (PlayerBotMap::const_iterator it = GetPlayerBotsBegin();
+                     it != GetPlayerBotsEnd(); ++it)
+                {
+                    if (it->second)
+                        raidai::HandleChatCommand(it->second, texto);
+                }
+            }
+        }
+    }
+    /* ===== FIN PARCHE-IA-RAID C ===== */
     switch (packet.GetOpcode())
     {
         case CMSG_OFFER_PETITION:
