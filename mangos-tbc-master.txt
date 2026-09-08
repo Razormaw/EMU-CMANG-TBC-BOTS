@@ -1,0 +1,458 @@
+Folder PATH listing for volume Windows 11
+Volume serial number is 000001CC 1294:DF1D
+C:.
++---.github
+¦   +---workflows
++---build
+¦   +---CMakeFiles
+¦   ¦   +---05ad38d78f485ab4158e6eae59f64bd2
+¦   ¦   +---0d3fc17f356bd321c3f82b806e50ce78
+¦   ¦   +---3.22.1
+¦   ¦   ¦   +---CompilerIdC
+¦   ¦   ¦   ¦   +---Debug
+¦   ¦   ¦   ¦   ¦   +---CompilerIdC.tlog
+¦   ¦   ¦   ¦   +---tmp
+¦   ¦   ¦   +---CompilerIdCXX
+¦   ¦   ¦   ¦   +---Debug
+¦   ¦   ¦   ¦   ¦   +---CompilerIdCXX.tlog
+¦   ¦   ¦   ¦   +---tmp
+¦   ¦   ¦   +---VCTargetsPath
+¦   ¦   ¦   ¦   +---x64
+¦   ¦   ¦   ¦       +---Debug
+¦   ¦   ¦   ¦           +---VCTargetsPath.tlog
+¦   ¦   ¦   +---x64
+¦   ¦   ¦       +---Debug
+¦   ¦   +---41a3d8dbb29af2753727fe4382155432
+¦   ¦   +---54176c2cd9ebd65ce7a55d14c1f3477d
+¦   ¦   +---6b865b9ced4558bf07831b71ba5ffed4
+¦   ¦   +---6dbb3bfa8bc162220b206068877a6621
+¦   ¦   +---6facb84fcbcedc33c21671aeb83e5b15
+¦   ¦   +---928fd011f9d6131672f1bfccf74bebf9
+¦   ¦   +---934df8ec8975af9ca2407a0f1ea49233
+¦   ¦   +---986e234d89e1c414ccb827c6edf6e9e6
+¦   ¦   +---99b10fe8a0a0d0ec716f01acc787f0ec
+¦   ¦   +---a26d9f0ab1085732c4dadb402e75e647
+¦   ¦   +---ca499fa8c514b5ca92a5e1caf61df285
+¦   ¦   +---CheckTypeSize
+¦   ¦   +---CMakeTmp
+¦   ¦   +---de64fa1616a20ab7aeff84f75e2b2418
+¦   ¦   +---e10a35855e769a929f97b00f75c6b678
+¦   ¦   +---f6f7636a4357cb297963dc0631e6cbe9
+¦   +---dep
+¦   ¦   +---CMakeFiles
+¦   ¦   +---g3dlite
+¦   ¦   ¦   +---CMakeFiles
+¦   ¦   +---recastnavigation
+¦   ¦   ¦   +---CMakeFiles
+¦   ¦   ¦   +---Detour
+¦   ¦   ¦       +---CMakeFiles
+¦   ¦   +---src
+¦   ¦       +---CMakeFiles
+¦   ¦       +---gsoap
+¦   ¦       ¦   +---CMakeFiles
+¦   ¦       +---utf8cpp
+¦   ¦           +---CMakeFiles
+¦   +---src
+¦   ¦   +---CMakeFiles
+¦   ¦   +---framework
+¦   ¦   ¦   +---CMakeFiles
+¦   ¦   +---game
+¦   ¦   ¦   +---CMakeFiles
+¦   ¦   ¦       +---game.dir
+¦   ¦   ¦           +---Debug
+¦   ¦   ¦           +---MinSizeRel
+¦   ¦   ¦           +---Release
+¦   ¦   ¦           +---RelWithDebInfo
+¦   ¦   +---mangosd
+¦   ¦   ¦   +---CMakeFiles
+¦   ¦   +---realmd
+¦   ¦   ¦   +---CMakeFiles
+¦   ¦   +---shared
+¦   ¦       +---CMakeFiles
+¦   ¦           +---shared.dir
+¦   ¦               +---Debug
+¦   ¦               +---MinSizeRel
+¦   ¦               +---Release
+¦   ¦               +---RelWithDebInfo
+¦   +---_deps
+¦       +---zlib-build
+¦       ¦   +---CMakeFiles
+¦       ¦   +---contrib
+¦       ¦       +---CMakeFiles
+¦       +---zlib-src
+¦       ¦   +---.github
+¦       ¦   ¦   +---workflows
+¦       ¦   +---amiga
+¦       ¦   +---contrib
+¦       ¦   ¦   +---ada
+¦       ¦   ¦   ¦   +---cmake
+¦       ¦   ¦   ¦       +---Modules
+¦       ¦   ¦   +---blast
+¦       ¦   ¦   ¦   +---test
+¦       ¦   ¦   +---crc32vx
+¦       ¦   ¦   +---delphi
+¦       ¦   ¦   +---dotzlib
+¦       ¦   ¦   ¦   +---DotZLib
+¦       ¦   ¦   +---gcc_gvmat64
+¦       ¦   ¦   +---infback9
+¦       ¦   ¦   +---iostream
+¦       ¦   ¦   +---iostream2
+¦       ¦   ¦   +---iostream3
+¦       ¦   ¦   ¦   +---test
+¦       ¦   ¦   +---minizip
+¦       ¦   ¦   ¦   +---test
+¦       ¦   ¦   +---nuget
+¦       ¦   ¦   +---pascal
+¦       ¦   ¦   +---puff
+¦       ¦   ¦   ¦   +---test
+¦       ¦   ¦   +---testzlib
+¦       ¦   ¦   +---vstudio
+¦       ¦   ¦   +---zlib1-dll
+¦       ¦   +---doc
+¦       ¦   +---examples
+¦       ¦   +---msdos
+¦       ¦   +---os400
+¦       ¦   +---qnx
+¦       ¦   +---test
+¦       ¦   +---watcom
+¦       ¦   +---win32
+¦       +---zlib-subbuild
+¦           +---CMakeFiles
+¦           ¦   +---3.22.1
+¦           ¦   ¦   +---VCTargetsPath
+¦           ¦   ¦   ¦   +---x64
+¦           ¦   ¦   ¦       +---Debug
+¦           ¦   ¦   ¦           +---VCTargetsPath.tlog
+¦           ¦   ¦   +---x64
+¦           ¦   ¦       +---Debug
+¦           ¦   +---8fc5fbab07d0159bdd4d802981783c54
+¦           ¦   +---91972a67663789192ba4926d5e6dbb4d
+¦           ¦   +---Debug
+¦           ¦   +---f30f7b3cfbc820c09c7efacf9957e17c
+¦           ¦   +---zlib-populate.dir
+¦           +---x64
+¦           ¦   +---Debug
+¦           ¦       +---ALL_BUILD
+¦           ¦       ¦   +---ALL_BUILD.tlog
+¦           ¦       +---ZERO_CHECK
+¦           ¦       ¦   +---ZERO_CHECK.tlog
+¦           ¦       +---zlib-populate
+¦           ¦           +---zlib-populate.tlog
+¦           +---zlib-populate-prefix
+¦               +---src
+¦               ¦   +---zlib-populate-stamp
+¦               ¦       +---Debug
+¦               +---tmp
++---cmake
+¦   +---compiler
+¦   ¦   +---clang
+¦   ¦   +---gcc
+¦   ¦   +---msvc
+¦   +---macros
+¦   ¦   +---FindBoost
+¦   +---platform
+¦       +---unix
+¦       +---win
++---contrib
+¦   +---backporting
+¦   +---cleanupTools
+¦   +---convertConditions
+¦   +---dbcEditer
+¦   ¦   +---bin
+¦   +---dbcformat
+¦   +---DB_Tools
+¦   ¦   +---WorldDB
+¦   +---extractor
+¦   ¦   +---loadlib
+¦   +---extractor_scripts
+¦   +---git_id
+¦   +---iteminstance_converter
+¦   +---mmap
+¦   ¦   +---src
+¦   +---mysql_to_pgsql
+¦   ¦   +---cmake
+¦   ¦   +---src
+¦   +---recastdemomod
+¦   ¦   +---dep
+¦   ¦   ¦   +---fastlz
+¦   ¦   ¦   +---font
+¦   ¦   ¦   +---SDL
+¦   ¦   ¦   ¦   +---docs
+¦   ¦   ¦   ¦   ¦   +---html
+¦   ¦   ¦   ¦   ¦   +---images
+¦   ¦   ¦   ¦   +---include
+¦   ¦   ¦   ¦   +---lib
+¦   ¦   ¦   ¦       +---x64
+¦   ¦   ¦   ¦       +---x86
+¦   ¦   ¦   +---stb_image
+¦   ¦   +---Include
+¦   ¦   +---Source
+¦   +---soap
+¦   +---vmap_assembler
+¦   +---vmap_extractor
+¦       +---vmapextract
+¦           +---loadlib
++---dep
+¦   +---g3dlite
+¦   ¦   +---G3D
+¦   +---include
+¦   ¦   +---bzip2
+¦   ¦   +---gsoap
+¦   ¦   +---postgre
+¦   ¦   +---utf8cpp
+¦   ¦       +---doc
+¦   ¦       +---utf8
+¦   +---json
+¦   +---lib
+¦   ¦   +---include
+¦   ¦   ¦   +---mysql
+¦   ¦   ¦   ¦   +---mysql
+¦   ¦   ¦   ¦   +---openssl
+¦   ¦   ¦   +---openssl
+¦   ¦   +---x64_Debug
+¦   ¦   +---x64_MinSizeRel
+¦   ¦   +---x64_Release
+¦   ¦   +---x64_RelWithDebInfo
+¦   +---libmpq
+¦   ¦   +---bindings
+¦   ¦   ¦   +---d
+¦   ¦   ¦   +---python
+¦   ¦   +---debian
+¦   ¦   +---doc
+¦   ¦   ¦   +---man1
+¦   ¦   ¦   +---man3
+¦   ¦   +---libmpq
+¦   ¦   +---tools
+¦   ¦   +---win
+¦   +---recastnavigation
+¦   ¦   +---DebugUtils
+¦   ¦   ¦   +---Include
+¦   ¦   ¦   +---Source
+¦   ¦   +---Detour
+¦   ¦   ¦   +---Include
+¦   ¦   ¦   +---Source
+¦   ¦   +---DetourCrowd
+¦   ¦   ¦   +---Include
+¦   ¦   ¦   +---Source
+¦   ¦   +---DetourTileCache
+¦   ¦   ¦   +---Include
+¦   ¦   ¦   +---Source
+¦   ¦   +---Docs
+¦   ¦   ¦   +---Conceptual
+¦   ¦   ¦   +---doxygen-awesome-css
+¦   ¦   ¦   ¦   +---doxygen-custom
+¦   ¦   ¦   +---Extern
+¦   ¦   ¦   +---Images
+¦   ¦   +---Recast
+¦   ¦   ¦   +---Include
+¦   ¦   ¦   +---Source
+¦   ¦   +---RecastDemo
+¦   ¦   ¦   +---cmake
+¦   ¦   ¦   +---Contrib
+¦   ¦   ¦   ¦   +---fastlz
+¦   ¦   ¦   +---Include
+¦   ¦   ¦   +---Source
+¦   ¦   +---Tests
+¦   ¦       +---Contrib
+¦   ¦       ¦   +---catch2
+¦   ¦       +---Detour
+¦   ¦       +---Recast
+¦   +---src
+¦       +---bzip2
+¦       +---gsoap
+¦       +---utf8cpp
++---doc
+¦   +---PlayerBot
+¦   +---scripts docs
++---sql
+¦   +---archive
+¦   ¦   +---0.10
+¦   ¦   +---0.11
+¦   ¦   +---0.12
+¦   ¦   +---0.12.1
+¦   ¦   +---0.12.2
+¦   ¦   +---0.12.3
+¦   ¦   +---0.5
+¦   ¦   +---0.6
+¦   ¦   +---0.7
+¦   ¦   +---0.8
+¦   ¦   +---0.9
+¦   +---base
+¦   ¦   +---ahbot
+¦   ¦   +---dbc
+¦   ¦       +---cmangos_fixes
+¦   ¦       +---original_data
+¦   +---create
+¦   +---scriptdev2
+¦   +---tools
+¦   +---updates
+¦       +---characters
+¦       +---logs
+¦       +---mangos
+¦       +---realmd
++---src
+    +---framework
+    ¦   +---Dynamic
+    ¦   +---GameSystem
+    ¦   +---Policies
+    ¦   +---Utilities
+    ¦       +---LinkedReference
+    +---game
+    ¦   +---Accounts
+    ¦   +---Addons
+    ¦   +---AI
+    ¦   ¦   +---BaseAI
+    ¦   ¦   +---EventAI
+    ¦   ¦   +---PlayerAI
+    ¦   ¦   +---ScriptDevAI
+    ¦   ¦       +---base
+    ¦   ¦       +---include
+    ¦   ¦       +---scripts
+    ¦   ¦       ¦   +---battlegrounds
+    ¦   ¦       ¦   +---eastern_kingdoms
+    ¦   ¦       ¦   ¦   +---blackrock_depths
+    ¦   ¦       ¦   ¦   +---blackrock_spire
+    ¦   ¦       ¦   ¦   +---blackwing_lair
+    ¦   ¦       ¦   ¦   +---deadmines
+    ¦   ¦       ¦   ¦   +---gnomeregan
+    ¦   ¦       ¦   ¦   +---karazhan
+    ¦   ¦       ¦   ¦   +---magisters_terrace
+    ¦   ¦       ¦   ¦   +---molten_core
+    ¦   ¦       ¦   ¦   +---naxxramas
+    ¦   ¦       ¦   ¦   +---scarlet_monastery
+    ¦   ¦       ¦   ¦   +---scholomance
+    ¦   ¦       ¦   ¦   +---shadowfang_keep
+    ¦   ¦       ¦   ¦   +---stratholme
+    ¦   ¦       ¦   ¦   +---sunken_temple
+    ¦   ¦       ¦   ¦   +---sunwell_plateau
+    ¦   ¦       ¦   ¦   +---uldaman
+    ¦   ¦       ¦   ¦   +---zulaman
+    ¦   ¦       ¦   ¦   +---zulgurub
+    ¦   ¦       ¦   +---examples
+    ¦   ¦       ¦   +---kalimdor
+    ¦   ¦       ¦   ¦   +---blackfathom_deeps
+    ¦   ¦       ¦   ¦   +---caverns_of_time
+    ¦   ¦       ¦   ¦   ¦   +---dark_portal
+    ¦   ¦       ¦   ¦   ¦   +---hyjal
+    ¦   ¦       ¦   ¦   ¦   +---old_hillsbrad
+    ¦   ¦       ¦   ¦   +---dire_maul
+    ¦   ¦       ¦   ¦   +---maraudon
+    ¦   ¦       ¦   ¦   +---onyxias_lair
+    ¦   ¦       ¦   ¦   +---razorfen_downs
+    ¦   ¦       ¦   ¦   +---razorfen_kraul
+    ¦   ¦       ¦   ¦   +---ruins_of_ahnqiraj
+    ¦   ¦       ¦   ¦   +---temple_of_ahnqiraj
+    ¦   ¦       ¦   ¦   +---wailing_caverns
+    ¦   ¦       ¦   ¦   +---zulfarrak
+    ¦   ¦       ¦   +---outland
+    ¦   ¦       ¦   ¦   +---auchindoun
+    ¦   ¦       ¦   ¦   ¦   +---auchenai_crypts
+    ¦   ¦       ¦   ¦   ¦   +---mana_tombs
+    ¦   ¦       ¦   ¦   ¦   +---sethekk_halls
+    ¦   ¦       ¦   ¦   ¦   +---shadow_labyrinth
+    ¦   ¦       ¦   ¦   +---black_temple
+    ¦   ¦       ¦   ¦   +---coilfang_reservoir
+    ¦   ¦       ¦   ¦   ¦   +---serpent_shrine
+    ¦   ¦       ¦   ¦   ¦   +---slave_pens
+    ¦   ¦       ¦   ¦   ¦   +---steam_vault
+    ¦   ¦       ¦   ¦   ¦   +---underbog
+    ¦   ¦       ¦   ¦   +---gruuls_lair
+    ¦   ¦       ¦   ¦   +---hellfire_citadel
+    ¦   ¦       ¦   ¦   ¦   +---blood_furnace
+    ¦   ¦       ¦   ¦   ¦   +---hellfire_ramparts
+    ¦   ¦       ¦   ¦   ¦   +---magtheridons_lair
+    ¦   ¦       ¦   ¦   ¦   +---shattered_halls
+    ¦   ¦       ¦   ¦   +---tempest_keep
+    ¦   ¦       ¦   ¦       +---arcatraz
+    ¦   ¦       ¦   ¦       +---botanica
+    ¦   ¦       ¦   ¦       +---the_eye
+    ¦   ¦       ¦   ¦       +---the_mechanar
+    ¦   ¦       ¦   +---world
+    ¦   ¦       +---system
+    ¦   +---Anticheat
+    ¦   ¦   +---module
+    ¦   ¦       +---Antispam
+    ¦   ¦       +---discord_bot
+    ¦   ¦       ¦   +---plugins
+    ¦   ¦       +---Movement
+    ¦   ¦       +---Warden
+    ¦   ¦       +---warden_modules
+    ¦   +---Arena
+    ¦   +---AuctionHouse
+    ¦   +---AuctionHouseBot
+    ¦   +---BattleGround
+    ¦   +---Chat
+    ¦   +---Cinematics
+    ¦   +---Combat
+    ¦   +---DBScripts
+    ¦   +---Entities
+    ¦   +---GameEvents
+    ¦   +---Globals
+    ¦   +---GMTickets
+    ¦   +---Grids
+    ¦   +---Groups
+    ¦   +---Guilds
+    ¦   +---LFG
+    ¦   +---Loot
+    ¦   +---Mails
+    ¦   +---Maps
+    ¦   +---MotionGenerators
+    ¦   +---Movement
+    ¦   +---OutdoorPvP
+    ¦   +---PlayerBot
+    ¦   ¦   +---.github
+    ¦   ¦   ¦   +---workflows
+    ¦   ¦   +---ahbot
+    ¦   ¦   +---AI
+    ¦   ¦   +---playerbot
+    ¦   ¦   ¦   +---strategy
+    ¦   ¦   ¦       +---actions
+    ¦   ¦   ¦       +---deathknight
+    ¦   ¦   ¦       +---druid
+    ¦   ¦   ¦       +---generic
+    ¦   ¦   ¦       +---hunter
+    ¦   ¦   ¦       +---mage
+    ¦   ¦   ¦       +---paladin
+    ¦   ¦   ¦       +---priest
+    ¦   ¦   ¦       +---rogue
+    ¦   ¦   ¦       +---shaman
+    ¦   ¦   ¦       +---tests
+    ¦   ¦   ¦       +---triggers
+    ¦   ¦   ¦       +---values
+    ¦   ¦   ¦       +---warlock
+    ¦   ¦   ¦       +---warrior
+    ¦   ¦   +---sql
+    ¦   ¦       +---characters
+    ¦   ¦       +---other
+    ¦   ¦       +---world
+    ¦   ¦           +---classic
+    ¦   ¦           +---tbc
+    ¦   ¦           +---wotlk
+    ¦   +---Pools
+    ¦   +---Quests
+    ¦   +---Reputation
+    ¦   +---Server
+    ¦   +---Skills
+    ¦   +---Social
+    ¦   +---Spells
+    ¦   ¦   +---Scripts
+    ¦   ¦       +---Scripting
+    ¦   ¦           +---ClassScripts
+    ¦   +---Tools
+    ¦   +---Trade
+    ¦   +---vmap
+    ¦   +---VoiceChat
+    ¦   +---Weather
+    ¦   +---World
+    +---mangosd
+    +---realmd
+    +---shared
+        +---Auth
+        +---Config
+        +---Database
+        +---Log
+        +---Metric
+        +---Multithreading
+        +---Network
+        +---Platform
+        +---Util
