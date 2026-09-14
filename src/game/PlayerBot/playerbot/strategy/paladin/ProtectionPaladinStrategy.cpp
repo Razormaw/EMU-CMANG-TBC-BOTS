@@ -47,6 +47,55 @@ NextAction** ProtectionPaladinStrategy::GetDefaultCombatActions()
 
 void ProtectionPaladinStrategy::InitCombatTriggers(std::list<TriggerNode*>& triggers)
 {
+    PaladinStrategy::InitCombatTriggers(triggers);  
+	
+	    triggers.push_back(new TriggerNode(
+        "master target",
+        NextAction::array(0, new NextAction("attack", ACTION_HIGH + 5), NULL)));
+	
+	triggers.push_back(new TriggerNode(
+        "righteous fury",
+        NextAction::array(0, new NextAction("righteous fury", ACTION_HIGH + 4), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "has blessing of salvation",
+        NextAction::array(0, new NextAction("remove blessing of salvation", ACTION_EMERGENCY), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "has greater blessing of salvation",
+        NextAction::array(0, new NextAction("remove greater blessing of salvation", ACTION_EMERGENCY), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "lose aggro",
+        NextAction::array(0, new NextAction("righteous defense", ACTION_PASSTROUGH), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "protect party member",
+        NextAction::array(0, new NextAction("blessing of protection on party", ACTION_CRITICAL_HEAL), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "holy shield",
+        NextAction::array(0, new NextAction("holy shield", ACTION_HIGH + 3), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "low mana",
+        NextAction::array(0, new NextAction("seal of wisdom", ACTION_HIGH + 1), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "exorcism",
+        NextAction::array(0, new NextAction("exorcism", ACTION_NORMAL + 3), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "seal",
+        NextAction::array(0, new NextAction("seal of vengeance", ACTION_NORMAL + 2), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "judgement",
+        NextAction::array(0, new NextAction("judgement", ACTION_NORMAL + 1), NULL)));
+}
+
+void ProtectionPaladinStrategy::InitCombatTriggers(std::list<TriggerNode*>& triggers)
+{
     PaladinStrategy::InitCombatTriggers(triggers);
 
     triggers.push_back(new TriggerNode(
@@ -566,6 +615,14 @@ NextAction** ProtectionPaladinStrategy::GetDefaultCombatActions()
 void ProtectionPaladinStrategy::InitCombatTriggers(std::list<TriggerNode*>& triggers)
 {
     PaladinStrategy::InitCombatTriggers(triggers);  
+	
+	    triggers.push_back(new TriggerNode(
+        "master target",
+        NextAction::array(0, new NextAction("attack", ACTION_HIGH + 5), NULL)));
+	
+	triggers.push_back(new TriggerNode(
+        "righteous fury",
+        NextAction::array(0, new NextAction("righteous fury", ACTION_HIGH + 4), NULL)));
 
     triggers.push_back(new TriggerNode(
         "has blessing of salvation",
@@ -723,10 +780,10 @@ void ProtectionPaladinAoeStrategy::InitCombatTriggers(std::list<TriggerNode*>& t
         "melee light aoe",
         NextAction::array(0, new NextAction("consecration", ACTION_HIGH + 1), NULL)));
 
-    /*triggers.push_back(new TriggerNode(
+    triggers.push_back(new TriggerNode(
         "avenger's shield",
         NextAction::array(0, new NextAction("avenger's shield", ACTION_HIGH), NULL)));
-    */
+    
 }
 
 void ProtectionPaladinAoeStrategy::InitNonCombatTriggers(std::list<TriggerNode*>& triggers)
@@ -1084,6 +1141,55 @@ NextAction** ProtectionPaladinStrategy::GetDefaultCombatActions()
 
 void ProtectionPaladinStrategy::InitCombatTriggers(std::list<TriggerNode*>& triggers)
 {
+    PaladinStrategy::InitCombatTriggers(triggers);  
+	
+	    triggers.push_back(new TriggerNode(
+        "master target",
+        NextAction::array(0, new NextAction("attack", ACTION_HIGH + 5), NULL)));
+	
+	triggers.push_back(new TriggerNode(
+        "righteous fury",
+        NextAction::array(0, new NextAction("righteous fury", ACTION_HIGH + 4), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "has blessing of salvation",
+        NextAction::array(0, new NextAction("remove blessing of salvation", ACTION_EMERGENCY), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "has greater blessing of salvation",
+        NextAction::array(0, new NextAction("remove greater blessing of salvation", ACTION_EMERGENCY), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "lose aggro",
+        NextAction::array(0, new NextAction("righteous defense", ACTION_PASSTROUGH), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "protect party member",
+        NextAction::array(0, new NextAction("blessing of protection on party", ACTION_CRITICAL_HEAL), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "holy shield",
+        NextAction::array(0, new NextAction("holy shield", ACTION_HIGH + 3), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "low mana",
+        NextAction::array(0, new NextAction("seal of wisdom", ACTION_HIGH + 1), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "exorcism",
+        NextAction::array(0, new NextAction("exorcism", ACTION_NORMAL + 3), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "seal",
+        NextAction::array(0, new NextAction("seal of vengeance", ACTION_NORMAL + 2), NULL)));
+
+    triggers.push_back(new TriggerNode(
+        "judgement",
+        NextAction::array(0, new NextAction("judgement", ACTION_NORMAL + 1), NULL)));
+}
+
+void ProtectionPaladinStrategy::InitCombatTriggers(std::list<TriggerNode*>& triggers)
+{
     PaladinStrategy::InitCombatTriggers(triggers);
 
     triggers.push_back(new TriggerNode(
@@ -1230,10 +1336,9 @@ void ProtectionPaladinAoeStrategy::InitCombatTriggers(std::list<TriggerNode*>& t
         //"melee light aoe",
         //NextAction::array(0, new NextAction("oil of immolation", ACTION_HIGH + 4), NULL)));
 
-    triggers.push_back(new TriggerNode(
+        triggers.push_back(new TriggerNode(
         "melee light aoe",
-        NextAction::array(0, new NextAction("hammer of the righteous", ACTION_HIGH + 3),
-                             new NextAction("avenger's shield", ACTION_HIGH + 2), NULL)));
+        NextAction::array(0, new NextAction("avenger's shield", ACTION_HIGH + 3), NULL)));
 
     triggers.push_back(new TriggerNode(
         "melee light aoe",

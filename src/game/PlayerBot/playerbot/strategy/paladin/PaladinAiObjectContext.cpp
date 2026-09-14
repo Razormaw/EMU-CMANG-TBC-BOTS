@@ -289,6 +289,7 @@ namespace ai
                 creators["cleanse party member cure magic"] = [](PlayerbotAI* ai) { return new CleanseCurePartyMemberMagicTrigger(ai); };
                 creators["righteous fury"] = [](PlayerbotAI* ai) { return new RighteousFuryTrigger(ai); };
                 creators["holy shield"] = [](PlayerbotAI* ai) { return new HolyShieldTrigger(ai); };
+				creators["master target"] = [](PlayerbotAI* ai) { return new MasterTargetTrigger(ai); };
                 creators["hammer of justice on enemy healer"] = [](PlayerbotAI* ai) { return new HammerOfJusticeEnemyHealerTrigger(ai); };
                 creators["hammer of justice on snare target"] = [](PlayerbotAI* ai) { return new HammerOfJusticeSnareTrigger(ai); };
                 creators["divine favor"] = [](PlayerbotAI* ai) { return new DivineFavorTrigger(ai); };

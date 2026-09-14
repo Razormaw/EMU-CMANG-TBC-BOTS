@@ -33,7 +33,11 @@ bool ShamanWeaponTrigger::IsActive()
 
 bool ShockTrigger::IsActive()
 {
-    return SpellTrigger::IsActive() && !ai->HasAnyAuraOf(GetTarget(), "frost shock", "earth shock", "flame shock", NULL) && !HasMaxDebuffs();
+    // Permite earth shock como interrupción incluso si flame shock está activo
+    // Solo bloquea si ya hay earth shock o frost shock activos
+    return SpellTrigger::IsActive() && 
+           !ai->HasAnyAuraOf(GetTarget(), "earth shock", "frost shock", NULL) && 
+           !HasMaxDebuffs();
 }
 
 bool FlameShockTrigger::IsActive()

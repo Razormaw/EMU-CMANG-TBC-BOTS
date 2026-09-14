@@ -55,10 +55,10 @@ public:
     static std::list<uint32> specialQuestIds;
     void InitSkills();
     void EnchantEquipment();
-    void EquipGear() { InitEquipment(false, false); InitGems(); }
+    void EquipGear() { InitEquipment(false, false); InitGems(); EnchantEquipment(); }
+    void UpgradeGear(bool syncWithMaster) { InitEquipment(!syncWithMaster, syncWithMaster); InitGems(); EnchantEquipment(); }
     void EquipGearBest() { return InitEquipment(false, false, false); }
     void EquipGearPartialUpgrade() { return InitEquipment(false, false, true, true); }
-    void UpgradeGear(bool syncWithMaster) { return InitEquipment(!syncWithMaster, syncWithMaster); }
     void AddReagents() { return InitReagents(); }
     void AddPotions() { return InitPotions(); }
     void AddConsumes() { return AddConsumables(); }

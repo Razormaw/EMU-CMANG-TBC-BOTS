@@ -304,3 +304,37 @@ bool ExorcismTrigger::IsActive()
 
     return false;
 }
+
+bool MasterTargetTrigger::IsActive()
+{
+    // Solo para tanques
+    if (!ai->IsTank(bot))
+        return false;
+    
+    Player* master = ai->GetMaster();
+    if (!master)
+        return false;
+    
+    Unit* masterTarget = master->GetVictim();
+    if (!masterTarget)
+        return false;
+    
+    // Solo reaccionar a mobs, no jugadores
+    if (masterTarget->IsPlayer())
+        return false;
+    
+    // No reaccionar si el bot ya está atacando ese target
+    Unit* currentTarget = AI_VALUE(Unit*, "current target");
+    if (currentTarget == masterTarget)
+        return false;
+    
+    // Verificar que el target esté vivo y en rango razonable
+    if (!masterTarget->IsAlive())
+        return false;
+    
+    float distance = sServerFacade.GetDistance2d(bot, masterTarget);
+    if (distance > sPlayerbotAIConfig.sightDistance)
+        return false;
+    
+    return true;
+}

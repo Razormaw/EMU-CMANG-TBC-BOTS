@@ -1,4 +1,5 @@
 
+#include "playerbot/PlayerbotFactory.h"
 #include "playerbot/playerbot.h"
 #include "playerbot/Talentspec.h"
 #include "ChangeTalentsAction.h"
@@ -78,6 +79,7 @@ bool ChangeTalentsAction::Execute(Event& event)
                 }
 
                 ai->UpdateTalentSpec();
+				ai->ResetSpecStrategies();
             }
             else
             {
@@ -110,14 +112,22 @@ bool ChangeTalentsAction::Execute(Event& event)
                             sRandomPlayerbotMgr.SetValue(bot->GetGUIDLow(), "specLink", 0);
 
                             ai->UpdateTalentSpec();
+							ai->ResetSpecStrategies();
                         }
                     }
                 }
             }
         }
 
-        // learn available spells
-        ai->DoSpecificAction("auto learn spell");
+                        // learn available spells
+                        ai->DoSpecificAction("auto learn spell");
+
+        // Re-equipar equipo + gemas + encantamientos segun la nueva spec
+            if (!bot->IsInCombat())
+        {
+            PlayerbotFactory gearFactory(bot, bot->GetLevel(), ITEM_QUALITY_EPIC);
+            gearFactory.EquipGear();
+        }
     }
     else
     {
@@ -418,5 +428,15 @@ bool AutoSetTalentsAction::Execute(Event& event)
 
     return true;
 }
-
+bool ResetStrategiesAction::Execute(Event& event)
+{
+    Player* requester = event.getOwner() ? event.getOwner() : GetMaster();
+    ai->ResetSpecStrategies();
+    
+    std::ostringstream out;
+    out << "Estrategias reiniciadas para la spec actual";
+    ai->TellPlayer(requester, out, PlayerbotSecurityLevel::PLAYERBOT_SECURITY_ALLOW_ALL, false);
+    
+    return true;
+}
 

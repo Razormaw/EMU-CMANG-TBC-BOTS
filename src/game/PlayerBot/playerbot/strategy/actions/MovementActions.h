@@ -127,6 +127,14 @@ namespace ai
         virtual bool Execute(Event& event) override;
         virtual bool isUseful() override;
     };
+	
+	    class MaintainRangedDistanceAction : public MovementAction
+    {
+    public:
+        MaintainRangedDistanceAction(PlayerbotAI* ai) : MovementAction(ai, "maintain ranged distance") {}
+        virtual bool Execute(Event& event) override;
+        virtual bool isUseful() override;
+    };
 
     class SetFacingTargetAction : public Action
     {

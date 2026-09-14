@@ -32,4 +32,10 @@ namespace ai
         virtual bool Execute(Event& event) override;
         virtual bool isUsefulWhenStunned() override { return true; }
     };
+	    class ResetStrategiesAction : public ChatCommandAction
+    {
+    public:
+        ResetStrategiesAction(PlayerbotAI* ai) : ChatCommandAction(ai, "reset strategies") {}
+        virtual bool Execute(Event& event) override;
+    };
 }

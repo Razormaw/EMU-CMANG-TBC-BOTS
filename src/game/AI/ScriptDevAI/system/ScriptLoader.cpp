@@ -124,6 +124,12 @@ extern void AddSC_instance_scholomance();
 extern void AddSC_scholomance();
 extern void AddSC_shadowfang_keep();                        // shadowfang_keep
 extern void AddSC_instance_shadowfang_keep();
+extern void AddSC_boss_targorr_the_dread();                 // stockade
+extern void AddSC_boss_kam_deepfury();
+extern void AddSC_boss_hamhock();
+extern void AddSC_boss_dextren_ward();
+extern void AddSC_boss_bazil_thredd();
+extern void AddSC_boss_bruegal_ironknuckle();
 extern void AddSC_boss_maleki_the_pallid();                 // stratholme
 extern void AddSC_boss_cannon_master_willey();
 extern void AddSC_boss_baroness_anastari();
@@ -239,6 +245,11 @@ extern void AddSC_instance_temple_of_ahnqiraj();
 extern void AddSC_instance_wailing_caverns();               // wailing_caverns
 extern void AddSC_wailing_caverns();
 extern void AddSC_boss_zumrah();                            // zulfarrak
+extern void AddSC_boss_antusul();
+extern void AddSC_boss_theka_the_martyr();
+extern void AddSC_boss_gahzrilla();
+extern void AddSC_boss_sezzziz();
+extern void AddSC_boss_chief_ukorz_sandscalp();
 extern void AddSC_instance_zulfarrak();
 extern void AddSC_zulfarrak();
 
@@ -489,6 +500,12 @@ void AddScripts()
     AddSC_scholomance();
     AddSC_shadowfang_keep();                                // shadowfang_keep
     AddSC_instance_shadowfang_keep();
+	AddSC_boss_targorr_the_dread();                         // stockade
+    AddSC_boss_kam_deepfury();
+    AddSC_boss_hamhock();
+    AddSC_boss_dextren_ward();
+    AddSC_boss_bazil_thredd();
+    AddSC_boss_bruegal_ironknuckle();
     AddSC_boss_maleki_the_pallid();                         // stratholme
     AddSC_boss_cannon_master_willey();
     AddSC_boss_baroness_anastari();
@@ -604,6 +621,11 @@ void AddScripts()
     AddSC_instance_wailing_caverns();                       // wailing_caverns
     AddSC_wailing_caverns();
     AddSC_boss_zumrah();                                    // zulfarrak
+    AddSC_boss_antusul();
+    AddSC_boss_theka_the_martyr();
+    AddSC_boss_gahzrilla();
+    AddSC_boss_sezzziz();
+    AddSC_boss_chief_ukorz_sandscalp();
     AddSC_zulfarrak();
     AddSC_instance_zulfarrak();
 

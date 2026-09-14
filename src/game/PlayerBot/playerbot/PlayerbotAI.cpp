@@ -851,6 +851,164 @@ void PlayerbotAI::UpdateTalentSpec(PlayerTalentSpec spec)
     aiObjectContext->GetValue<PlayerTalentSpec>("talent spec")->Set(spec);
 }
 
+// Sincroniza las estrategias de los 4 motores con la rama de talentos actual.
+// IMPORTANTE: Solo debe llamarse manualmente, NUNCA automáticamente desde UpdateTalentSpec
+void PlayerbotAI::ResetSpecStrategies()
+{
+    if (!bot)
+        return;
+
+    uint8 cls = bot->getClass();
+    int tab = AiFactory::GetPlayerSpecTab(bot);
+
+    std::vector<std::string> allSpecs;
+    switch (cls)
+    {
+        case CLASS_WARRIOR: allSpecs.push_back("arms"); allSpecs.push_back("fury"); allSpecs.push_back("protection"); break;
+        case CLASS_PALADIN: allSpecs.push_back("holy"); allSpecs.push_back("protection"); allSpecs.push_back("retribution"); break;
+        case CLASS_HUNTER:  allSpecs.push_back("beast mastery"); allSpecs.push_back("marksmanship"); allSpecs.push_back("survival"); break;
+        case CLASS_ROGUE:   allSpecs.push_back("assassination"); allSpecs.push_back("combat"); allSpecs.push_back("subtlety"); break;
+        case CLASS_PRIEST:  allSpecs.push_back("discipline"); allSpecs.push_back("holy"); allSpecs.push_back("shadow"); break;
+        case CLASS_SHAMAN:  allSpecs.push_back("elemental"); allSpecs.push_back("enhancement"); allSpecs.push_back("restoration"); break;
+        case CLASS_MAGE:    allSpecs.push_back("arcane"); allSpecs.push_back("fire"); allSpecs.push_back("frost"); break;
+        case CLASS_WARLOCK: allSpecs.push_back("affliction"); allSpecs.push_back("demonology"); allSpecs.push_back("destruction"); break;
+        case CLASS_DRUID:   allSpecs.push_back("balance"); allSpecs.push_back("dps feral"); allSpecs.push_back("tank feral"); allSpecs.push_back("restoration"); break;
+#ifdef MANGOSBOT_TWO
+        case CLASS_DEATH_KNIGHT: allSpecs.push_back("blood"); allSpecs.push_back("frost"); allSpecs.push_back("unholy"); break;
+#endif
+        default: return;
+    }
+
+    std::string newSpec;
+    bool tank = false, melee = true, behind = false;
+    bool addOffDps = false, addOffHeal = false;
+
+    switch (cls)
+    {
+        case CLASS_WARRIOR:
+            if (tab == 2) { newSpec = "protection"; tank = true; }
+            else if (tab == 0 || bot->GetLevel() < 30) { newSpec = "arms"; behind = true; }
+            else { newSpec = "fury"; behind = true; }
+            break;
+        case CLASS_PALADIN:
+            if (tab == 1) { newSpec = "protection"; tank = true; }
+            else if (tab == 0) { newSpec = "holy"; melee = false; addOffDps = true; }
+            else { newSpec = "retribution"; addOffHeal = true; }
+            break;
+        case CLASS_HUNTER:
+            newSpec = (tab == 0) ? "beast mastery" : (tab == 2) ? "survival" : "marksmanship";
+            melee = false;
+            break;
+        case CLASS_ROGUE:
+            newSpec = (tab == 0) ? "assassination" : (tab == 2) ? "subtlety" : "combat";
+            behind = true;
+            break;
+        case CLASS_PRIEST:
+            newSpec = (tab == 0) ? "discipline" : (tab == 1) ? "holy" : "shadow";
+            melee = false;
+            if (tab == 1) addOffDps = true; else addOffHeal = true;
+            break;
+        case CLASS_SHAMAN:
+            if (tab == 0) { newSpec = "elemental"; melee = false; addOffHeal = true; }
+            else if (tab == 2) { newSpec = "restoration"; melee = false; addOffDps = true; }
+            else { newSpec = "enhancement"; addOffHeal = true; }
+            break;
+        case CLASS_MAGE:
+            newSpec = (tab == 0) ? "arcane" : (tab == 1) ? "fire" : "frost";
+            melee = false;
+            break;
+        case CLASS_WARLOCK:
+            newSpec = (tab == 0) ? "affliction" : (tab == 1) ? "demonology" : "destruction";
+            melee = false;
+            break;
+        case CLASS_DRUID:
+            if (tab == 1)
+            {
+                if (bot->HasSpell(16961) || bot->HasSpell(16958)) { newSpec = "tank feral"; tank = true; }
+                else { newSpec = "dps feral"; behind = true; addOffHeal = true; }
+            }
+            else if (tab == 2) { newSpec = "restoration"; melee = false; addOffDps = true; }
+            else { newSpec = "balance"; melee = false; addOffHeal = true; }
+            break;
+#ifdef MANGOSBOT_TWO
+        case CLASS_DEATH_KNIGHT:
+            if (tab == 0) { newSpec = "blood"; tank = true; }
+            else if (tab == 1) newSpec = "frost";
+            else newSpec = "unholy";
+            break;
+#endif
+    }
+
+    if (newSpec.empty())
+        return;
+
+        // ---- v2: Limpiar y re-aplicar en los 4 motores (combat, non-combat, dead, reaction) ----
+    for (uint8 i = 0; i < (uint8)BotState::BOT_STATE_ALL; ++i)
+    {
+        Engine* e = engines[i];
+        if (!e)
+            continue;
+
+        // Cambiar rama de spec en TODOS los motores
+        for (size_t s = 0; s < allSpecs.size(); ++s)
+            e->removeStrategy(allSpecs[s]);
+        e->addStrategy(newSpec);
+
+        bool isCombat    = (i == (uint8)BotState::BOT_STATE_COMBAT);
+        bool isNonCombat = (i == (uint8)BotState::BOT_STATE_NON_COMBAT);
+
+        if (isCombat || isNonCombat)
+        {
+            e->removeStrategy("tank assist");
+            e->removeStrategy("dps assist");
+            e->removeStrategy("offheal");
+            e->removeStrategy("offdps");
+
+            if (tank)
+                e->addStrategy("tank assist");
+            else
+                e->addStrategy("dps assist");
+
+            if (sPlayerbotAIConfig.enableOffSpecStrategies)
+            {
+                if (addOffDps)  e->addStrategy("offdps");
+                if (addOffHeal) e->addStrategy("offheal");
+            }
+        }
+
+        if (isCombat)
+        {
+            e->removeStrategy("pull");
+            e->removeStrategy("pull back");
+            e->removeStrategy("close");
+            e->removeStrategy("behind");
+            e->removeStrategy("ranged");
+            e->removeStrategy("flee");
+
+            if (tank)
+            {
+                e->addStrategy("pull");
+                e->addStrategy("pull back");
+                e->addStrategy("close");
+            }
+            else if (melee)
+            {
+                e->addStrategy("close");
+                if (behind)
+                    e->addStrategy("behind");
+            }
+            else
+            {
+                e->addStrategy("ranged");
+                e->addStrategy("flee");   // solo castadores/ranged huyen
+            }
+        }
+    }
+
+    // Refrescar el motor activo para reconstruir triggers con las nuevas estrategias
+    ReInitCurrentEngine();
+}
+
 bool PlayerbotAI::CanEnterArea(const AreaTrigger* area)
 {
     if (sRandomPlayerbotMgr.IsRandomBot(GetBot()))
@@ -1233,13 +1391,30 @@ void PlayerbotAI::HandleTeleportAck()
         // add delay to simulate teleport delay
         SetAIInternalUpdateDelay(urand(1000, 2000));
 	}
-	else if (bot->IsBeingTeleportedFar())
-	{
-        bot->GetSession()->HandleMoveWorldportAckOpcode();
+    else if (bot->IsBeingTeleportedFar())
+    {
+        // guard BG race - bot-only fix for MapManager::CreateInstance assert
+        WorldLocation const& loc = bot->GetTeleportDest();
+        if (MapEntry const* mEntry = sMapStore.LookupEntry(loc.mapid))
+        {
+            if (mEntry->IsBattleGround())
+            {
+                uint32 bgId = bot->GetBattleGroundId();
+                if (!bgId || !sMapMgr.FindMap(loc.mapid, bgId))
+                {
+                    sLog.outError("PlayerbotAI::HandleTeleportAck: bot %s BG %u aborted bgId=%u", bot->GetName(), loc.mapid, bgId);
+                    bot->SetSemaphoreTeleportFar(false);
+                    Reset();
+                    if (IsRealPlayer())
+                        bot->SendHeartBeat();
+                    return;
+                }
+            }
+        }
 
-        // add delay to simulate teleport delay
+        bot->GetSession()->HandleMoveWorldportAckOpcode();
         SetAIInternalUpdateDelay(urand(2000, 5000));
-	}
+    }
 
     if (IsRealPlayer())
         bot->SendHeartBeat();

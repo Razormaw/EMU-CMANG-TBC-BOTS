@@ -665,6 +665,7 @@ public:
 
     PlayerTalentSpec GetTalentSpec();
     void UpdateTalentSpec(PlayerTalentSpec spec = PlayerTalentSpec::TALENT_SPEC_INVALID);
+    void ResetSpecStrategies();   // <-- NUEVO: sincroniza estrategias con la rama de talentos
 
     bool CanEnterArea(const AreaTrigger* area);
     void Unmount();

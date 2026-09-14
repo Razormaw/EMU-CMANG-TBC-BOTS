@@ -3263,6 +3263,44 @@ bool MoveOutOfEnemyContactAction::isUseful()
     return MovementAction::isUseful() && AI_VALUE2(bool, "inside target", "current target");
 }
 
+bool MaintainRangedDistanceAction::isUseful()
+{
+    return MovementAction::isUseful() && ai->IsRanged(bot) && !ai->IsTank(bot);
+}
+
+bool MaintainRangedDistanceAction::Execute(Event& event)
+{
+    Unit* target = AI_VALUE(Unit*, "current target");
+    if (!target || !target->IsInWorld() || target->IsDead())
+        return false;
+
+    // No interrumpir un cast en curso
+    if (bot->IsNonMeleeSpellCasted(false, false, true))
+        return false;
+
+    float const spellRange = ai->GetRange("spell");
+    float const tooClose = spellRange * 0.5f;   // ~15y: zona prohibida
+    float const desired  = spellRange * 0.8f;   // ~24y: donde quiere parar
+    float const currentDist = sServerFacade.GetDistance2d(bot, target);
+    if (currentDist >= tooClose)
+        return false;                           // ya está bien posicionado
+
+    // Retroceder en línea recta lejos del target
+    float const angle = bot->GetAngle(target);
+    float const needToGo = desired - currentDist;
+    float dx = bot->GetPositionX() - cos(angle) * needToGo;
+    float dy = bot->GetPositionY() - sin(angle) * needToGo;
+    float dz = bot->GetPositionZ();
+    bot->UpdateGroundPositionZ(dx, dy, dz);
+    if (!MaNGOS::IsValidMapCoord(dx, dy, dz))
+        return false;
+    if (!bot->IsWithinLOS(dx, dy, dz + bot->GetCollisionHeight(), true))
+        return false;
+
+    ai->StopMoving();               // mata el generador "follow" que lo pegaba al melee
+    return MoveTo(bot->GetMapId(), dx, dy, dz);
+}
+
 bool SetFacingTargetAction::Execute(Event& event)
 {
     Unit* target = AI_VALUE(Unit*, "current target");

@@ -266,9 +266,10 @@ void PlayerbotFactory::Randomize(bool incremental, bool syncWithMaster)
         LoadEnchantContainer();
     }
 
-    InitEquipment(incremental, syncWithMaster);
-    InitGems();
-    pmo.reset();
+        InitEquipment(incremental, syncWithMaster);
+        InitGems();
+        EnchantEquipment();
+        pmo.reset();
 
     if (isRandomBot)
     {
@@ -3746,10 +3747,10 @@ void PlayerbotFactory::EnchantItem(Item* item)
 {
     if (!item)
         return;
-
     if (bot->GetLevel() < sPlayerbotAIConfig.minEnchantingBotLevel)
         return;
-
+    if (m_EnchantContainer.empty())          // ← AGREGAR estas 2 líneas
+        LoadEnchantContainer();              // ←
     int tab = AiFactory::GetPlayerSpecTab(bot);
     uint32 tempId = uint32((uint32)bot->getClass() * (uint32)10);
     ApplyEnchantTemplate(tempId += (uint32)tab, item);

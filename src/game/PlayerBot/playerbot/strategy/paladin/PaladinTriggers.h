@@ -502,4 +502,11 @@ namespace ai
 
     DEBUFF_TRIGGER(AvengerShieldTrigger, "avenger's shield");
     BOOST_TRIGGER(DivineIlluminationBoostTrigger, "divine illumination");
+	
+	    class MasterTargetTrigger : public Trigger
+    {
+    public:
+        MasterTargetTrigger(PlayerbotAI* ai) : Trigger(ai, "master target") {}
+        virtual bool IsActive() override;
+    };
 }
