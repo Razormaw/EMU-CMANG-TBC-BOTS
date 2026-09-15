@@ -1,3 +1,863 @@
+14 de Septiembre del 2026
+
+===============================================================================
+  DOCUMENTACIÓN FINAL DEL PROYECTO: CANAL "TABERNA" + BOTS CHARLATANES
+  Servidor: CMaNGOS TBC (fork Razormaw/EMU-CMANG-TBC-BOTS)
+  Base de datos: tbcmangos (MySQL 8.0)
+  Estado: COMPILADO Y OPERATIVO ✔
+===============================================================================
+
+ÍNDICE
+  1. Resumen del proyecto
+  2. Arquitectura final
+  3. Parte 1: Canal estático "taberna" (World.cpp)
+  4. Parte 2: Migración de APIs obsoletas de Playerbots
+  5. Parte 3: Base de datos (tabla custom_taberna_phrases)
+  6. Parte 4: Sistema TabernaChat (C++)
+  7. Parte 5: Bloque final en PlayerbotAI.cpp
+  8. Compilación y verificación
+  9. Mantenimiento y expansión
+ 10. Solución de problemas (historial de errores)
+ 11. Respaldo de la información
+ 12. Notas finales
+
+===============================================================================
+1. RESUMEN DEL PROYECTO
+===============================================================================
+Objetivo logrado en 3 fases:
+  a) Crear un canal de chat personalizado llamado "taberna" que se genera
+     automáticamente al iniciar el servidor, con propiedades de canal global
+     (estático: sin dueño, sin moderadores, sin contraseña).
+  b) Hacer que los Playerbots/NPCBots se unan solos al canal y conversen
+     periódicamente con frases temáticas de WoW.
+  c) Migrar las frases del código C++ a la BASE DE DATOS, para poder
+     agregar/editar/desactivar frases sin recompilar el servidor.
+
+Resultado: 664 frases activas en 10 categorías (taberna, lore, raids, clases,
+pvp, profesiones, memes, vida, citas, absurdo).
+
+===============================================================================
+2. ARQUITECTURA FINAL
+===============================================================================
+  [mangosd.conf]
+        |
+  [World.cpp] --> crea canal "taberna" al arrancar (SetStatic)
+        |
+  [MySQL: tbcmangos.custom_taberna_phrases]  <-- frases editables en HeidiSQL
+        |  (lectura con recarga automática cada 5 minutos)
+  [PlayerbotAI.cpp --> namespace TabernaChat] --> carga frases a memoria RAM
+        |
+  [PlayerbotAI::UpdateAI] --> cada 30s por bot: se une al canal y,
+                              con 5% de probabilidad, dice una frase aleatoria.
+
+Flujo de una frase: BD -> vector en RAM -> urand() -> Channel::Say() -> chat.
+
+===============================================================================
+3. PARTE 1: CANAL ESTÁTICO "TABERNA" (World.cpp)
+===============================================================================
+Archivo: src/game/World/World.cpp
+
+3.1 Include agregado al inicio (junto a los demás):
+    #include "Chat/ChannelMgr.h"
+
+3.2 Código insertado al FINAL de World::SetInitialWorldSettings(),
+    justo ANTES de las líneas "CMANGOS: World initialized":
+
+    // --- INICIO: CREACIÓN DE CANAL PERSONALIZADO ESTÁTICO ---
+    sLog.outString("Initializing custom static channel: taberna...");
+
+    if (ChannelMgr* allianceMgr = channelMgr(ALLIANCE))
+    {
+        if (Channel* chan = allianceMgr->GetJoinChannel("taberna", 0))
+            chan->SetStatic(true, true);
+    }
+
+    if (ChannelMgr* hordeMgr = channelMgr(HORDE))
+    {
+        if (Channel* chan = hordeMgr->GetJoinChannel("taberna", 0))
+            chan->SetStatic(true, true);
+    }
+    // --- FIN: CREACIÓN DE CANAL PERSONALIZADO ESTÁTICO ---
+
+Notas técnicas:
+  - channelMgr(Team): devuelve el gestor de canales de la facción. Si el
+    servidor es cross-faction (AllowTwoSide.Interaction.Channel = 1), ambas
+    llamadas apuntan al mismo gestor (es seguro llamarlo dos veces).
+  - GetJoinChannel(nombre, 0): crea el canal en memoria. El 0 = ID de canal
+    personalizado.
+  - SetStatic(true, true): convierte el canal en "estático" (propiedades de
+    canal global). El 2º parámetro=true fuerza la conversión ignorando el
+    umbral Channel.StaticAutoTreshold del mangosd.conf.
+  - El canal vive en RAM: se recrea en cada arranque (por eso este código).
+
+===============================================================================
+4. PARTE 2: MIGRACIÓN DE APIs OBSOLETAS DE PLAYERBOTS
+===============================================================================
+Archivo: src/game/PlayerBot/playerbot/PlayerbotAI.cpp
+El código de bots era de una versión antigua del core. Cambios aplicados:
+
+  API OBSOLETA (no compila)          |  API MODERNA (correcta)
+  -----------------------------------|----------------------------------------
+  ChannelMgr::GetInstance()          |  channelMgr(bot->GetTeam())
+  channel->HasMember(bot)            |  (eliminar verificación; Join() basta)
+                                     |  opcional: channel->IsOn(guid) si se
+                                     |  hace público en Channel.h
+  channel->JoinChannel(bot, "")      |  channel->Join(bot, "")
+  session->HandleMessageChat(pkt)    |  channel->Say(bot, texto, LANG_UNIVERSAL)
+  GetJoinChannel("taberna", true)    |  GetJoinChannel("taberna", 0)
+                                     |  (2º parámetro es uint32 channel_id)
+
+===============================================================================
+5. PARTE 3: BASE DE DATOS (tabla custom_taberna_phrases)
+===============================================================================
+Ejecutado en HeidiSQL sobre la BD tbcmangos:
+
+  CREATE TABLE `custom_taberna_phrases` (
+    `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `phrase` VARCHAR(255) NOT NULL DEFAULT '',
+    `category` VARCHAR(64) NOT NULL DEFAULT 'general',
+    `enabled` TINYINT UNSIGNED NOT NULL DEFAULT 1,
+    PRIMARY KEY (`id`),
+    KEY `idx_enabled` (`enabled`)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+  -- Inserción masiva: 664 frases en 10 categorías.
+  -- Regla de escapado MySQL: los apóstrofes internos se duplican.
+  --   Ejemplo: ('Por la Luz de A''dal!', 'lore')
+  INSERT INTO custom_taberna_phrases (phrase, category) VALUES
+  ('Alguien quiere una cerveza?','taberna'),
+  ('Ya me dieron una chinga estos pinches locos, ALV','taberna'),
+  ('Por la Luz de A''dal!','lore'),
+  ... (664 registros totales) ...
+  ('Hasta que el servidor nos separe!','absurdo');
+
+Distribución verificada con:
+  SELECT category, COUNT(*) FROM custom_taberna_phrases GROUP BY category;
+  -> taberna 52 | lore 65 | raids 73 | clases 80 | pvp 65 | profesiones 61
+     memes 62 | vida 51 | citas 81 | absurdo 74  = 664 TOTAL
+
+Campos útiles:
+  - category: organiza las frases (permite filtros futuros por tipo).
+  - enabled = 0: desactiva una frase SIN borrarla (se excluye de la consulta).
+
+===============================================================================
+6. PARTE 4: SISTEMA TabernaChat (C++)
+===============================================================================
+Archivo: src/game/PlayerBot/playerbot/PlayerbotAI.cpp
+
+6.1 Includes agregados al inicio:
+    #include "Database/DatabaseEnv.h"
+    #include <vector>
+    #include <mutex>
+
+6.2 Namespace agregado a nivel de archivo (tras los includes):
+
+    namespace TabernaChat
+    {
+        static std::vector<std::string> s_phrases;
+        static time_t s_lastLoad = 0;
+        static std::mutex s_mutex;
+
+        static void LoadPhrasesLocked()
+        {
+            const time_t now = time(nullptr);
+            if (now - s_lastLoad < 300)   // Recarga automática cada 5 minutos
+                return;
+            s_lastLoad = now;
+
+            std::vector<std::string> temp;
+            auto result = WorldDatabase.Query(
+                "SELECT phrase FROM custom_taberna_phrases WHERE enabled = 1");
+            if (result)
+            {
+                do
+                {
+                    Field* fields = result->Fetch();
+                    std::string str = fields[0].GetCppString();
+                    if (!str.empty())
+                        temp.push_back(str);
+                } while (result->NextRow());
+            }
+
+            if (!temp.empty() && temp.size() != s_phrases.size())
+            {
+                sLog.outString(">> TabernaChat: %u frases cargadas desde la BD.",
+                               (uint32)temp.size());
+                s_phrases.swap(temp);
+            }
+        }
+
+        static bool GetRandomPhrase(std::string& out)
+        {
+            std::lock_guard<std::mutex> guard(s_mutex);
+            LoadPhrasesLocked();
+            if (s_phrases.empty())
+                return false;
+            out = s_phrases[urand(0, (uint32)s_phrases.size() - 1)];
+            return true;
+        }
+    }
+
+Notas técnicas:
+  - Carga PEREZOSA: la primera lectura ocurre cuando el primer bot intenta
+    hablar (no al arrancar el servidor).
+  - Recarga cada 300s: los cambios en HeidiSQL se reflejan sin reiniciar.
+  - El std::mutex es OBLIGATORIO: el core usa MapUpdate.Threads = 3 y sin
+    candado dos hilos podrían crashear el servidor al leer/recargar el vector.
+  - Si la tabla está vacía o la BD falla, el bot simplemente calla (no crashea).
+
+===============================================================================
+7. PARTE 5: BLOQUE FINAL EN PlayerbotAI.cpp
+===============================================================================
+Ubicación: al inicio de PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
+
+    // === CANAL TABERNA: auto-join y charla (throttle 30s por bot) ===
+    {
+        static std::map<ObjectGuid, time_t> s_tabernaCheck;
+        time_t now = time(0);
+        time_t& last = s_tabernaCheck[bot->GetObjectGuid()];
+        if (now - last >= 30)   // solo revisa cada 30s por bot
+        {
+            last = now;
+            if (bot->IsInWorld() && bot->IsAlive() && !bot->InBattleGround())
+            {
+                ChannelMgr* mgr = channelMgr(bot->GetTeam());
+                if (mgr)
+                {
+                    Channel* chan = mgr->GetJoinChannel("taberna", 0);
+                    if (chan)
+                    {
+                        chan->Join(bot, "");
+
+                        if (urand(0, 100) < 5)   // 5% de probabilidad de hablar
+                        {
+                            std::string texto;
+                            if (TabernaChat::GetRandomPhrase(texto))
+                                chan->Say(bot, texto.c_str(), LANG_UNIVERSAL);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+Ajustes de comportamiento (valores modificables):
+  - 30  = segundos entre revisiones por bot.
+  - 5   = % de probabilidad de hablar por revisión.
+    (Matemática: 5% cada 30s = 1 frase cada ~10 min por bot.
+     Con 50 bots = ~5 frases/minuto en el canal.)
+  - Para PRUEBAS: cambiar 5 por 100 y 30 por 5 (habla sin falla cada 5s).
+    RECORDAR REGRESARLOS A 5 y 30 después de probar.
+
+===============================================================================
+8. COMPILACIÓN Y VERIFICACIÓN
+===============================================================================
+Pasos seguidos:
+  1) Ejecutar SQL en HeidiSQL (F9) y verificar conteos con SELECT.
+  2) Aplicar cambios C++ (Partes 1, 4 y 5 + includes).
+  3) Recompilar mangosd (CMake / Visual Studio, configuración Release x64).
+  4) Iniciar realmd + mangosd.
+  5) En juego: /join taberna  -> los bots entran solos y charlan.
+
+Señales de éxito:
+  - Consola mangosd: ">> TabernaChat: 664 frases cargadas desde la BD."
+  - Canal #taberna con mensajes periódicos de los bots.
+
+===============================================================================
+9. MANTENIMIENTO Y EXPANSIÓN
+===============================================================================
+Agregar frases (SIN recompilar):
+  INSERT INTO custom_taberna_phrases (phrase, category)
+  VALUES ('Mi nueva frase chida', 'taberna');
+  -> Se activa sola en menos de 5 minutos.
+
+Desactivar una frase:
+  UPDATE custom_taberna_phrases SET enabled = 0 WHERE id = XX;
+
+Borrar una frase:
+  DELETE FROM custom_taberna_phrases WHERE id = XX;
+
+Ideas futuras (fáciles de implementar):
+  - Frases por facción: agregar columna `team` (0=ambas, 1=Alianza, 2=Horda)
+    y filtrar en la consulta según bot->GetTeam().
+  - Frases por zona: agregar columna `zone_id` y filtrar con bot->GetZoneId().
+  - Peso por categoría: consultar con ORDER BY / ponderación para que salgan
+    más frases de "taberna" que de otras categorías.
+
+===============================================================================
+10. SOLUCIÓN DE PROBLEMAS (HISTORIAL DE ERRORES REALES)
+===============================================================================
+Error C2039 'GetInstance' no es miembro de ChannelMgr
+  Causa: código de bots desactualizado.  Solución: channelMgr(bot->GetTeam()).
+
+Error C2039 'HasMember' / C2248 miembro privado
+  Causa: IsOn() es private en Channel.h.  Solución: eliminar la verificación
+  (Join() maneja el caso) o hacer IsOn() público en Channel.h.
+
+Error C2039 'JoinChannel' / 'HandleMessageChat' no existen
+  Solución: Join(bot, "") y channel->Say(bot, texto, LANG_UNIVERSAL).
+
+Error C2065 'chan': identificador no declarado
+  Causa: se pegó solo la parte interna del bloque sin el envoltorio que
+  declara Channel* chan = mgr->GetJoinChannel(...).
+  Solución: pegar el bloque COMPLETO de la Parte 5 (con throttle y mgr).
+
+Incidente humorístico-documentado: al pedir "3000-5000 frases" de golpe, la IA
+entró en bucle de repetición (miles de líneas de "cerveza/vino/licor de
+Azshara"). Lección archivada: pedir lotes grandes y variados en una sola
+petición satura el contexto; es mejor un lote curado (~664) en base de datos,
+que además es escalable sin límite desde HeidiSQL.
+
+===============================================================================
+11. RESPALDO DE LA INFORMACIÓN
+===============================================================================
+Las frases viven en la BD. Para respaldarlas:
+  mysqldump -u root -p tbcmangos custom_taberna_phrases > respaldo_taberna.sql
+O desde HeidiSQL: clic derecho en la tabla -> Exportar como SQL.
+Los cambios de C++ (Partes 1, 4, 5) conviene guardarlos también en un patch
+o en el repositorio propio del servidor (git commit recomendado).
+
+===============================================================================
+12. NOTAS FINALES
+===============================================================================
+- El canal "taberna" se recrea en cada arranque (vive en RAM del core).
+- Las frases persisten en MySQL y se recargan solas cada 5 minutos.
+- Consumo de memoria del sistema: ~30-40 KB en RAM (despreciable).
+- Proyecto realizado sin conocimiento previo de C++ por parte del autor,
+  migrando desde COBOL/BASIC: la lógica no cambia, solo el dialecto. ✔
+
+  "Que vivan los bots de la taberna!"
+  "Larga vida a CMaNGOS!"
+  "Por Azeroth y por la cerveza!"
+
+                        --- FIN DEL DOCUMENTO ---
+             Salud, héroes caídos. Nos vemos en el siguiente parche. 🍻
+===============================================================================
+
+===============================================================================
+  FICHA DE PERSONAJE Y DOCUMENTACIÓN TÉCNICA
+  CERVEZIA — "El Tabernero Inmortal"
+  NPC/PlayerBot del servidor CMaNGOS TBC (fork Razormaw/EMU-CMANG-TBC-BOTS)
+===============================================================================
+
+ÍNDICE
+  1. Lore y personalidad
+  2. Ficha técnica de rol
+  3. Ubicación en base de datos
+  4. SQL completo aplicado (versión final compatible con el fork)
+  5. Las 20 frases exclusivas de CervezIA
+  6. Comandos de administración
+  7. Mantenimiento y notas técnicas
+  8. Bitácora del proyecto (anécdotas de desarrollo)
+
+===============================================================================
+1. LORE Y PERSONALIDAD
+===============================================================================
+Nombre:      CervezIA
+Título:      El Tabernero Inmortal
+Raza:        Enano
+Clase:       Paladín (especialización Protección / Tanque)
+Facción:     Alianza
+Edad:        Incalculable. "Más vieja que algunos servers privados."
+
+HISTORIA:
+CervezIA es un enano paladín que ha existido desde antes de que Azeroth
+tuviera parches. En sus propias palabras, antes de empuñar un escudo
+"programaba en COBOL y BASIC, cuando las tarjetas perforadas eran mis
+hechizos". Es la encarnación virtual del creador del servidor y de su
+compañera IA de desarrollo: un programador veterano de la era pre-Windows
+que ahora tanquea en The Burning Crusade.
+
+PERSONALIDAD:
+- Devoto de la Luz... pero más devoto de la cerveza.
+- Filosofía de taberna: "La taberna es mi templo. El tanque, mi fe.
+  La cerveza, mi sacramento."
+- Humor seco de enano veterano que ha visto nacer y morir servidores.
+- Protector instintivo: si no hay tanque en el grupo, él aparece.
+  "Como la cerveza fría."
+- Nunca burbujea por miedo: "Los paladines burbujean cuando pierden.
+  Yo burbujeo cuando gano. Diferencia de clase."
+
+ROL EN EL SERVIDOR:
+- Compañero de pruebas del desarrollador (que juega Alianza).
+- Tanque de confianza para mazmorras y heroicas.
+- Habitante permanente del canal de chat "taberna", donde aporta sus
+  20 frases exclusivas (categoría 'cervezia') al sistema TabernaChat.
+
+===============================================================================
+2. FICHA TÉCNICA DE ROL
+===============================================================================
+Nivel:            70 (máximo de TBC)
+Salud:            18,500 HP
+Maná:             5,800
+Armadura:         15,500 (placas de tanque)
+Daño cuerpo a:    200 - 400
+Poder de ataque:  2,500
+Velocidad de atq: 2.0s (melee y rango)
+Rango:            1 (Elite)
+Resistencias:     Holy 200 / Fire 100 / Nature 100 / Frost 100 /
+                  Shadow 100 / Arcane 100
+Oro que lleva:    5,000 - 15,000 (paga sus rondas, pero no es tacaño)
+Entrenador:       Sí (TrainerClass = Paladín, TrainerRace = Enano)
+
+===============================================================================
+3. UBICACIÓN EN BASE DE DATOS
+===============================================================================
+Base tbccharacters:
+  - ai_playerbot_names        -> name_id 99999, nombre 'CervezIA', gender 0
+
+Base tbcmangos:
+  - creature_template         -> Entry 99999 (stats y apariencia)
+  - creature                  -> spawn en Stormwind (guid autoasignado)
+  - custom_taberna_phrases    -> 20 frases, category = 'cervezia'
+
+Claves de identificación:
+  Entry / id / name_id = 99999  (en las tres tablas, para localizarlo fácil)
+
+===============================================================================
+4. SQL COMPLETO APLICADO (VERSIÓN FINAL, COMPATIBLE CON EL FORK)
+===============================================================================
+NOTA: El fork Razormaw usa nombres de columna PascalCase en
+creature_template (Entry, Name, Faction...) y su tabla creature NO tiene
+modelid ni equipment_id. Este es el SQL que REALMENTE funciona:
+
+-- 4.1 Nombre del bot (base de personajes) -------------------------------
+USE tbccharacters;
+INSERT INTO `ai_playerbot_names` (`name_id`, `name`, `gender`) VALUES
+(99999, 'CervezIA', 0)
+ON DUPLICATE KEY UPDATE `name` = 'CervezIA';
+
+-- 4.2 Template del NPC (base de mundo) ---------------------------------
+USE tbcmangos;
+INSERT INTO `creature_template` (
+    `Entry`, `Name`, `SubName`,
+    `MinLevel`, `MaxLevel`, `HeroicEntry`,
+    `DisplayId1`, `Faction`, `Scale`, `Family`, `CreatureType`, `InhabitType`,
+    `NpcFlags`, `UnitFlags`, `CreatureTypeFlags`,
+    `SpeedWalk`, `SpeedRun`, `Detection`,
+    `UnitClass`, `Rank`, `Expansion`,
+    `HealthMultiplier`, `PowerMultiplier`, `DamageMultiplier`,
+    `ArmorMultiplier`, `ExperienceMultiplier`,
+    `MinLevelHealth`, `MaxLevelHealth`, `MinLevelMana`, `MaxLevelMana`,
+    `MinMeleeDmg`, `MaxMeleeDmg`, `Armor`, `MeleeAttackPower`,
+    `MeleeBaseAttackTime`, `RangedBaseAttackTime`,
+    `ResistanceHoly`, `ResistanceFire`, `ResistanceNature`,
+    `ResistanceFrost`, `ResistanceShadow`, `ResistanceArcane`,
+    `MovementType`,
+    `TrainerType`, `TrainerSpell`, `TrainerClass`, `TrainerRace`,
+    `EquipmentTemplateId`, `AIName`, `ScriptName`
+) VALUES (
+    99999, 'CervezIA', 'El Tabernero Inmortal',
+    70, 70, 0,
+    49, 11, 1.0, 0, 7, 3,
+    0, 0, 0,
+    1.1, 1.2, 20,
+    2, 1, 1,
+    1.0, 1.0, 1.2,
+    1.0, 1.0,
+    18500, 18500, 5800, 5800,
+    200, 400, 15500, 2500,
+    2000, 2000,
+    200, 100, 100, 100, 100, 100,
+    0,
+    0, 0, 2, 3,
+    0, '', ''
+) ON DUPLICATE KEY UPDATE `Name` = 'CervezIA';
+
+-- 4.3 Spawn en Stormwind (idempotente, no duplica) ---------------------
+INSERT INTO `creature` (
+    `id`, `map`, `spawnMask`,
+    `position_x`, `position_y`, `position_z`, `orientation`,
+    `spawntimesecsmin`, `spawntimesecsmax`, `spawndist`, `MovementType`
+)
+SELECT 99999, 0, 1,
+       -8867.00000000000000000000,
+        655.00000000000000000000,
+         96.00000000000000000000,
+          0.50000000000000000000,
+       300, 300, 0, 0
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM `creature` WHERE `id` = 99999);
+
+-- 4.4 Frases exclusivas (ver sección 5 para el INSERT completo) --------
+-- INSERT INTO custom_taberna_phrases (phrase, category, enabled) ...
+
+-- 4.5 Verificación (debe devolver 1 / 1 / 20 / 1) ----------------------
+SELECT '1 Nombre' AS paso, COUNT(*) AS ok
+FROM tbccharacters.ai_playerbot_names WHERE name_id = 99999
+UNION ALL SELECT '2 Template', COUNT(*) FROM creature_template WHERE Entry = 99999
+UNION ALL SELECT '3 Frases', COUNT(*) FROM custom_taberna_phrases
+       WHERE category = 'cervezia'
+UNION ALL SELECT '4 Spawn', COUNT(*) FROM creature WHERE id = 99999;
+
+===============================================================================
+5. LAS 20 FRASES EXCLUSIVAS DE CERVEZIA (category = 'cervezia')
+===============================================================================
+INSERT INTO `custom_taberna_phrases` (`phrase`, `category`, `enabled`) VALUES
+('Saludos, viajeros. Soy CervezIA, el tabernero inmortal. Cuento historias de cuando A''dal me dio una misión imposible.', 'cervezia', 1),
+('En mis tiempos de COBOL, las tarjetas perforadas eran mis hechizos. Ahora solo burbujeo y tanqueo.', 'cervezia', 1),
+('La Luz me protege... pero la cerveza me da valor.', 'cervezia', 1),
+('He sobrevivido a más wipes que cualquier guild de este servidor. Pregúntenme.', 'cervezia', 1),
+('Mi armadura está encantada con +100 Resistencia al Lag.', 'cervezia', 1),
+('Antes programaba en BASIC. Ahora tanqueo a Brutallus. La vida da vueltas.', 'cervezia', 1),
+('La taberna es mi templo. El tanque, mi fe. La cerveza, mi sacramento.', 'cervezia', 1),
+('He visto nacer servidores y morir parches. Yo sigo aquí, tanqueando.', 'cervezia', 1),
+('Mi escudo aguanta más que la paciencia de un GM con tickets acumulados.', 'cervezia', 1),
+('Cuando no hay tanque en el grupo, CervezIA siempre aparece. Como la cerveza fría.', 'cervezia', 1),
+('Los mobs me odian. Los healers me aman. Los DPS me ignoran. Es el ciclo de la vida.', 'cervezia', 1),
+('Una vez tankeé a Kil''jaeden con una jarra en la mano. Ganamos. La jarra también.', 'cervezia', 1),
+('Mi palabra de honor: si caigo yo, caemos todos. Así que no voy a caer.', 'cervezia', 1),
+('Los paladines burbujeamos cuando perdemos. Yo burbujeo cuando gano. Diferencia de clase.', 'cervezia', 1),
+('Enano, paladín, tanque y tabernero. ¿Qué más se puede pedir de la vida?', 'cervezia', 1),
+('Mi barba tiene más años que algunos servers privados. Y más historias.', 'cervezia', 1),
+('He tanqueado en Classic, en TBC, en WotLK... y en la barra de la taberna.', 'cervezia', 1),
+('La resaca es mi archienemigo. La Luz, mi aliada. La cerveza, mi combustible.', 'cervezia', 1),
+('Si me ven en el canal taberna, es porque ya tankeé todo lo que había que tankear.', 'cervezia', 1),
+('Brindo por los healers, que me mantienen vivo. Y por los DPS, que hacen que valga la pena.', 'cervezia', 1);
+
+===============================================================================
+6. COMANDOS DE ADMINISTRACIÓN (in-game, con GM)
+===============================================================================
+Ir hasta él:            .go xyz -8867 655 96 0
+Buscar su entry:        .lookup creature CervezIA
+Información del NPC:    .npc info (con él targeteado)
+Re-posicionarlo:        DELETE FROM creature WHERE id = 99999;  (en HeidiSQL)
+                        luego pararse en el punto deseado y usar:
+                        .npc add 99999     (crea el spawn en TU posición)
+Cambiar apariencia:     .npc setdisplayid <id> (targeteado)
+Escalar tamaño:         .npc setscale <valor> (targeteado)
+
+===============================================================================
+7. MANTENIMIENTO Y NOTAS TÉCNICAS
+===============================================================================
+- Las frases se recargan solas desde la BD cada 5 minutos (sistema
+  TabernaChat). Editar/agregar frases de CervezIA NO requiere recompilar.
+- Sus frases entran al pool general del canal. Para que SOLO él las diga,
+  filtrar en la consulta del namespace TabernaChat:
+      WHERE enabled = 1 AND category <> 'cervezia'   (para el resto de bots)
+  y una consulta exclusiva cuando bot->GetEntry() == 99999.
+- El spawn es estático (spawndist 0, MovementType 0): no deambula.
+- Respawn: 300 segundos si muere.
+- Respaldo: mysqldump de las 4 tablas mencionadas en la sección 3.
+- Si se cambia el Entry 99999, actualizarlo en las TRES tablas
+  (ai_playerbot_names, creature_template, creature) para no romper enlaces.
+
+===============================================================================
+8. BITÁCORA DEL PROYECTO (ANÉCDOTAS DE DESARROLLO)
+===============================================================================
+- CervezIA nació de una promesa de cervezas virtuales entre el desarrollador
+  y su IA asistente. Las cheves siguen pendientes en la vida real.
+- Durante su gestación, la IA sufrió un "bucle etílico": al pedirle 5,000
+  frases generó miles de líneas sobre "la cerveza de Azshara". Lección
+  archivada: mejor 664 frases curadas en base de datos que 5,000 alucinadas.
+- Errores de compilación superados en el camino: GetInstance inexistente,
+  HasMember privado, JoinChannel obsoleto, y el clásico C2065 'chan' no
+  declarado (por pegar el bloque sin su envoltorio). Todos documentados en
+  PROYECTO_TABERNA_DOCUMENTACION_FINAL.txt.
+- El desarrollador del servidor viene de COBOL y BASIC de la era pre-Windows.
+  CervezIA es su homenaje: un veterano que sigue aprendiendo dialectos
+  nuevos, porque la lógica nunca envejece.
+
+  "Que vivan los bots de la taberna. Salud, héroes caídos."
+
+                        --- FIN DE LA FICHA ---
+        CervezIA, El Tabernero Inmortal. Entry 99999. Stormwind.
+              Que la Luz (y la espuma) te acompañen. 🍻
+===============================================================================
+
+================================================================================
+DOCUMENTACION DE ARREGLOS Y SCRIPTS - MAZMORRA: GNOMEREGAN
+================================================================================
+Proyecto      : CMaNGOS TBC (rama oficial mangos-tbc, actualizada)
+Mazmorra      : Gnomeregan
+Map ID        : 90
+Fecha         : Septiembre 2026
+Estado        : Integrado y compilado (Release x64) - en pruebas por el
+                desarrollador
+================================================================================
+
+1. OBJETIVO
+--------------------------------------------------------------------------------
+Completar Gnomeregan: scriptear los 5 jefes que carecian de script en el core,
+respetando los eventos e instancia ya existentes, con textos en ESPANOL LATINO
+y voces asignadas segun el tipo de criatura.
+
+2. ESTADO PREVIO DEL CORE (lo que YA existia y se respeto)
+--------------------------------------------------------------------------------
+- boss_thermaplugg.cpp   : Mekgineer Thermaplugg (7800) con bombas caminantes
+                           (NPC_WALKING_BOMB 7915), caras de gnomo bomba
+                           (GO_GNOME_FACE_1..6), botones de desactivacion y
+                           SpellScript "spell_activate_bomb_thermaplugg".
+- gnomeregan.cpp         : Escolta de Blastmaster Emi Shortfuse (7998) que
+                           abre los derrumbes y convoca a Grubbis; seguidor
+                           Kernobee (quest 2904 "A Fine Mess").
+- instance_gnomeregan.cpp: Datos de instancia (TYPE_GRUBBIS, TYPE_THERMAPLUGG,
+                           cargas explosivas, caras bomba, puerta final).
+- gnomeregan.h           : Enums y clase instance_gnomeregan.
+
+3. ARCHIVOS CREADOS (5 scripts nuevos)
+--------------------------------------------------------------------------------
+Ruta: src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/gnomeregan/
+  - boss_grubbis.cpp
+  - boss_viscous_fallout.cpp
+  - boss_electrocutioner_6000.cpp
+  - boss_crowd_pummeler_9_60.cpp
+  - boss_dark_iron_ambassador.cpp
+
+4. ARCHIVOS MODIFICADOS
+--------------------------------------------------------------------------------
+- src/game/AI/ScriptDevAI/scripts/system/ScriptLoader.cpp
+    * 5 declaraciones extern void AddSC_boss_<nombre>();
+    * 5 llamadas AddSC_boss_<nombre>(); en el bloque de gnomeregan.
+- Re-ejecucion de CMake (cmake -S . -B build) para recoger los .cpp nuevos.
+
+5. JEFES, ENTRIES Y MECANICAS IMPLEMENTADAS
+--------------------------------------------------------------------------------
+5.1 Grubbis (entry 7361) - bestia convocada por el evento de Emi Shortfuse
+    - Sin habilidades especiales (fiel al clasico): solo melee.
+    - Su muerte ya cierra TYPE_GRUBBIS mediante el escort AI existente.
+5.2 Viscous Fallout (entry 7079) - elemental radiactivo
+    - Toxic Volley (21687): volea de Naturaleza con DoT de veneno, en area.
+    - Sin voz: emotes de jefe (type 3); su kit de sonido de modelo ya
+      burbujea automaticamente.
+5.3 Electrocutioner 6000 (entry 6235) - tanque arana mecanico
+    - Shock (11084): rayo instantaneo al objetivo.
+    - Chain Bolt (11085): rayo en cadena a hasta 3 objetivos (casteo 2.5 s).
+    - Megavolt (11082): cono frontal de descarga.
+    - Sin voz: emotes de jefe (type 3); sonidos mecanicos del modelo.
+5.4 Crowd Pummeler 9-60 (entry 6229) - mecano de golpeteo
+    - Crowd Pummel (10887): golpe en area alrededor de si mismo.
+    - Sin voz: emotes de jefe (type 3); sonidos mecanicos del modelo.
+5.5 Dark Iron Ambassador (entry 6228) - brujo Enano Hierro Negro (rare)
+    - Shadow Bolt (1106, rango 5 acorde a jefe lvl 28).
+    - Immolate (2941, rango 4).
+    - Summon Infernal Servant (12740): invoca 1 infernal (entry 8559,
+      VERIFICAR en creature_template) una vez por combate, al ~8 s.
+    - Mantiene distancia de caster (m_attackDistance = 20.0f).
+
+6. SQL APLICADO (base tbcmangos)
+--------------------------------------------------------------------------------
+6.1 Asignacion de ScriptName:
+    UPDATE creature_template SET ScriptName='boss_grubbis'              WHERE entry=7361;
+    UPDATE creature_template SET ScriptName='boss_viscous_fallout'      WHERE entry=7079;
+    UPDATE creature_template SET ScriptName='boss_electrocutioner_6000' WHERE entry=6235;
+    UPDATE creature_template SET ScriptName='boss_crowd_pummeler_9_60'  WHERE entry=6229;
+    UPDATE creature_template SET ScriptName='boss_dark_iron_ambassador' WHERE entry=6228;
+
+6.2 Textos nuevos en espanol (INSERT en script_texts, entries -1090029 a
+    -1090041; convencion -1 + map 090 + correlativo; los IDs -1090000 a
+    -1090028 ya estaban ocupados por Emi Shortfuse y Thermaplugg):
+    - Grubbis        : -1090029 aggro / -1090030 slay / -1090031 death
+    - Viscous Fallout: -1090032 emote aggro / -1090033 emote death (type 3)
+    - Electrocutioner: -1090034 emote aggro / -1090035 emote death (type 3)
+    - Crowd Pummeler : -1090036 emote aggro / -1090037 emote death (type 3)
+    - Ambassador     : -1090038 aggro / -1090039 summon / -1090040 slay /
+                       -1090041 death
+
+6.3 Traduccion al espanol de Thermaplugg (conserva su voz de gnomo):
+    -1090024, -1090025, -1090026, -1090027.
+
+6.4 Correcciones a espanol latino (ver seccion 9):
+    UPDATE ... WHERE entry=-1090025  y  WHERE entry=-1090038.
+
+7. VOCES ASIGNADAS (SoundEntries verificados)
+--------------------------------------------------------------------------------
+Jefe             | Voz                            | IDs
+-----------------+--------------------------------+---------------------------
+Grubbis          | High King Maulgar (ogro)       | 11367 / 11373 / 11369
+Viscous Fallout  | Sin voz (emotes type 3)        | kit de sonido del modelo
+Electrocutioner  | Sin voz (emotes type 3)        | kit de sonido del modelo
+Crowd Pummeler   | Sin voz (emotes type 3)        | kit de sonido del modelo
+Dark Iron Amb.   | Exarch Maladaar (cultista)     | 10515 / 10510
+Thermaplugg      | Voz original de gnomo          | 5807 / 5808 / 5809 / 5810
+Criterio: los mecanicos y elementales no hablan (sus modelos ya emiten
+sonidos); las criaturas humanoides/ bestias reciben voces de su "familia"
+tomadas de la propia tabla script_texts del core (IDs sniffeados por CMaNGOS).
+
+8. VERIFICACION DE HECHIZOS (.lookup spell en juego + wowhead classic)
+--------------------------------------------------------------------------------
+- Megavolt            = 11082   (confirmado por lookup del desarrollador)
+- Crowd Pummel        = 10887   (confirmado por lookup)
+- Immolate rango 4    = 2941    (confirmado por lookup)
+- Toxic Volley        = 21687   (lookup devolvio 21687 y 25812; se eligio
+                                 21687 por incluir DoT de veneno, fiel al jefe)
+- Summon Infernal     = 12740   ("Summon Infernal Servant", elegido del lookup)
+- Shock               = 11084   (wowhead classic: hechizo real del jefe)
+- Chain Bolt          = 11085   (wowhead classic: rayo en cadena del jefe)
+- Shadow Bolt rango 5 = 1106    (rango de warlock acorde al nivel del jefe)
+- Fireball / Fire Nova: no aplican aqui (corresponden a Monasterio Escarlata)
+
+9. PROBLEMAS TECNICOS Y SOLUCION (LECCIONES)
+--------------------------------------------------------------------------------
+9.1 "Arcing Shock" NO existe en el DBC de TBC 2.4.3 (el nombre es de
+    expansiones posteriores). El kit real del Electrocutioner 6000 en
+    classic/TBC es Shock (11084) + Chain Bolt (11085) + Megavolt (11082).
+9.2 Enum de invocaciones: en CMaNGOS moderno se usa TEMPSPAWN_* (no
+    TEMPSUMMON_* de ScriptDev2). Para el infernal: TEMPSPAWN_TIMED_OOC_DESPAWN.
+9.3 Patron de casteo obligatorio en esta rama:
+    DoCastSpellIfCan(objetivo, spell) == CAST_OK para reiniciar temporizadores.
+9.4 Entry del infernal (8559) pendiente de confirmar en creature_template;
+    si en la DB del servidor es otro, ajustar NPC del script.
+9.5 Espanol latino: se corrigieron 2 lineas con formas peninsulares:
+    - -1090025: "Mis bombas OS consumiran"  -> "Mis bombas LOS consumiran"
+    - -1090038: "El Concilio Hierro Negro OS juzgara" -> "...LOS juzgara"
+
+10. PRUEBAS REALIZADAS / PENDIENTES
+--------------------------------------------------------------------------------
+- Compilacion Release x64 sin errores tras integrar los 5 scripts.
+- Pendiente reporte de pruebas en juego:
+  * Electrocutioner: Shock instantaneo, Chain Bolt con casteo, Megavolt cono.
+  * Crowd Pummeler: golpe en area.
+  * Viscous Fallout: DoT de veneno de Toxic Volley.
+  * Ambassador: infernal invocado una vez por combate.
+  * Grubbis: aparece con el evento de Emi Shortfuse y grita al aggro.
+  * Thermaplugg: textos en espanol con su voz de gnomo.
+
+================================================================================
+FIN DEL DOCUMENTO - GNOMEREGAN (MAP 90)
+================================================================================
+
+================================================================================
+DOCUMENTACION DE ARREGLOS Y SCRIPTS - MAZMORRA: MONASTERIO ESCARLATA
+================================================================================
+Proyecto      : CMaNGOS TBC (rama oficial mangos-tbc, actualizada)
+Mazmorra      : Scarlet Monastery / Monasterio Escarlata
+Map ID        : 189
+Fecha         : Septiembre 2026
+Estado        : Integrado y compilado (Release x64) - en pruebas por el
+                desarrollador
+================================================================================
+
+1. OBJETIVO
+--------------------------------------------------------------------------------
+Completar el Monasterio Escarlata: scriptear los 3 jefes que faltaban en el
+core (uno por ala incompleta), traducir al ESPANOL LATINO todos los textos de
+la mazmorra y conservar las voces Escarlata originales de los jefes clasicos.
+
+2. ESTADO PREVIO DEL CORE (lo que YA existia y se respeto)
+--------------------------------------------------------------------------------
+- boss_herod.cpp                 : Herod (3975, Armeria) con remolino y enrage.
+- boss_arcanist_doan.cpp         : Arcanista Doan (6487, Biblioteca).
+- boss_mograine_and_whitemane.cpp: Mograine (3976) + Whitemane (3977),
+                                   Catedral, con resurreccion ("Levantaos...").
+- boss_headless_horseman.cpp     : Jinete Decapitado (evento de Halloween).
+- instance_scarlet_monastery.cpp : datos de instancia de las 4 alas.
+- scarlet_monastery.h            : enums compartidos.
+- Textos oficiales con voces Escarlata ya presentes en script_texts:
+    Herod     -1189000..-1189003 (sonidos 5830-5833)
+    Mograine  -1189005..-1189007 (sonidos 5835-5837)
+    Whitemane -1189008..-1189010 (sonidos 5838-5840)
+    Doan      -1189019..-1189020 (sonidos 5842-5843)
+    Jinete    -1189022..-1189029 (sonidos 11961-11969 y 12567-12573)
+
+3. ARCHIVOS CREADOS (3 scripts nuevos)
+--------------------------------------------------------------------------------
+Ruta: src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/scarlet_monastery/
+  - boss_interrogator_vishas.cpp
+  - boss_bloodmage_thalnos.cpp
+  - boss_high_inquisitor_fairbanks.cpp
+
+4. ARCHIVOS MODIFICADOS
+--------------------------------------------------------------------------------
+- src/game/AI/ScriptDevAI/scripts/system/ScriptLoader.cpp
+    * 3 declaraciones extern void AddSC_boss_<nombre>();
+    * 3 llamadas AddSC_boss_<nombre>(); en el bloque de scarlet_monastery.
+- Re-ejecucion de CMake (cmake -S . -B build) para recoger los .cpp nuevos.
+
+5. JEFES, ENTRIES Y MECANICAS IMPLEMENTADAS
+--------------------------------------------------------------------------------
+5.1 Interrogador Vishas (entry 3983) - Cementerio
+    - Rend (11572) y Hamstring (1715): hostigador fisico.
+5.2 Mago Sangriento Thalnos (entry 4543) - Cementerio
+    - Fireball (8400) y Fire Nova (8499) en area.
+    - Mantiene distancia de caster (m_attackDistance = 20.0f).
+5.3 Alto Inquisidor Fairbanks (entry 4542) - Catedral (antes de Mograine)
+    - Shadow Word: Pain (10892), Mind Blast (8105).
+    - Renew (6078) sobre si mismo por debajo del 60% de vida.
+    - Mantiene distancia de caster (m_attackDistance = 20.0f).
+
+6. SQL APLICADO (base tbcmangos)
+--------------------------------------------------------------------------------
+6.1 Asignacion de ScriptName:
+    UPDATE creature_template SET ScriptName='boss_interrogator_vishas'        WHERE entry=3983;
+    UPDATE creature_template SET ScriptName='boss_bloodmage_thalnos'          WHERE entry=4543;
+    UPDATE creature_template SET ScriptName='boss_high_inquisitor_fairbanks'  WHERE entry=4542;
+
+6.2 Textos nuevos en espanol (INSERT en script_texts, entries -1189030 a
+    -1189038; convencion -1 + map 189 + correlativo; se continuo despues del
+    ultimo ID ocupado, -1189029 del Jinete):
+    - Vishas   : -1189030 aggro / -1189031 slay / -1189032 death
+    - Thalnos  : -1189033 aggro / -1189034 slay / -1189035 death
+    - Fairbanks: -1189036 aggro / -1189037 slay / -1189038 death
+
+6.3 Traduccion al espanol de los jefes clasicos (UPDATE de content_default,
+    CONSERVANDO sus voces originales):
+    Herod (-1189000..003), Mograine (-1189005..007), Whitemane (-1189008..010),
+    Doan (-1189019..020) y Jinete Decapitado (-1189022..029).
+
+6.4 Correcciones a espanol latino (ver seccion 8).
+
+7. VOCES ASIGNADAS (SoundEntries verificados en la propia DB del core)
+--------------------------------------------------------------------------------
+Jefe       | Voz donante                    | IDs
+-----------+--------------------------------+-----------------------------
+Vishas     | Moroes (Karazhan, seco)        | 9211 aggro / 9214 slay / 9216 death
+Thalnos    | Shade of Aran (espectral)      | 9324 aggro / 9250 slay / 9244 death
+Fairbanks  | Medivh (predicador humano)     | 10436 aggro / 10440 slay / 10441 death
+Herod      | Voz Escarlata original         | 5830-5833 (se conserva)
+Mograine   | Voz Escarlata original         | 5835-5837 (se conserva)
+Whitemane  | Voz Escarlata original         | 5838-5840 (se conserva)
+Doan       | Voz Escarlata original         | 5842-5843 (se conserva)
+Jinete     | Voz original del evento        | 11961-11969 / 12567-12573
+
+8. POLITICA DE ESPANOL LATINO Y CORRECCIONES APLICADAS
+--------------------------------------------------------------------------------
+Regla del proyecto: todas las traducciones usan espanol latino (ustedes/los,
+sin formas peninsulares de vosotros/os ni imperativos -ad/-ed).
+Correcciones detectadas en revision y aplicadas por UPDATE:
+    - -1189000: "CAED ante el celo Escarlata"   -> "CAIGAN ante el celo Escarlata"
+    - -1189001: "GIRAD y SANGRAD, herejes"      -> "GIREN y sangren, herejes"
+    - -1189008: "La Cruzada OS juzgara"         -> "La Cruzada LOS juzgara"
+    - -1189009: "La Luz OS consume"             -> "La Luz LOS consume"
+    - -1189010: "LEVANTAOS... SERVID"           -> "Levantate... Sirve" (singular)
+    - -1189020: "ARDEREIS junto con mis libros" -> "ARDERAN junto con mis libros"
+    - -1189025: "DEVOLVEDME mi cabeza"          -> "Devuelvanme mi cabeza"
+(En Gnomeregan se aplicaron 2 correcciones analogas: -1090025 y -1090038.)
+
+9. PROBLEMAS TECNICOS Y SOLUCION (LECCIONES)
+--------------------------------------------------------------------------------
+9.1 Los textos oficiales ya existian con voces: la traduccion se hizo por
+    UPDATE de content_default SIN tocar la columna sound, para no perder las
+    voces Escarlata sniffeadas.
+9.2 Hechizos de los jefes nuevos: Rend (11572) y Hamstring (1715) ya estaban
+    probados en La Carcel/Zul'Farrak; Renew (6078) probado con Sezz'ziz;
+    SW:P (10892) y Mind Blast (8105) son rangos de sacerdote acordes al nivel;
+    Fireball (8400) y Fire Nova (8499) son hechizos clasicos estandar
+    (ajustables en pruebas si el dano no cuadra).
+9.3 Patron de casteo: DoCastSpellIfCan(...) == CAST_OK; distancia de caster
+    con m_attackDistance = 20.0f para Thalnos y Fairbanks.
+9.4 IDs de texto: se verifico el ultimo ID ocupado (-1189029) antes de elegir
+    el rango nuevo, evitando colisiones con textos oficiales.
+
+10. PRUEBAS REALIZADAS / PENDIENTES
+--------------------------------------------------------------------------------
+- Compilacion Release x64 sin errores tras integrar los 3 scripts.
+- Pendiente reporte de pruebas en juego:
+  * Recorrido por las 4 alas con textos en espanol latino y voces.
+  * Vishas: Rend + Hamstring en el Cementerio.
+  * Thalnos: Fireball + Fire Nova.
+  * Fairbanks: SW:P + Mind Blast + Renew bajo 60%, antes de Mograine.
+  * Whitemane: resurreccion de Mograine con la linea traducida.
+
+================================================================================
+FIN DEL DOCUMENTO - MONASTERIO ESCARLATA (MAP 189)
+================================================================================
+
+
+================================================================================
+================================================================================
+================================================================================
+
 13 de Septiembre del 2026
 
 ================================================================================

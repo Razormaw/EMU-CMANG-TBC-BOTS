@@ -1,5 +1,5 @@
 Folder PATH listing for volume Windows 11
-Volume serial number is 00000252 1294:DF1D
+Volume serial number is 000001F0 1294:DF1D
 C:.
 ¦   .clang-format
 ¦   .gitattributes
@@ -26,6 +26,16 @@ C:.
 ¦           ubuntu.yml
 ¦           windows-release.yml
 ¦           windows.yml
+¦           
++---Addons
+¦   +---Bagnon
+¦   ¦       Bagnon.rar
+¦   ¦       
+¦   +---BotSpecManager
+¦   ¦       BotSpecManager.rar
+¦   ¦       
+¦   +---pfQuest-tbc
+¦           pfQuest-tbc.rar
 ¦           
 +---build
 ¦   ¦   ALL_BUILD.vcxproj
@@ -658,7 +668,7 @@ C:.
 ¦   ¦   ¦   ¦       ¦   ObjectLifeTime.obj
 ¦   ¦   ¦   ¦       ¦   
 ¦   ¦   ¦   ¦       +---framework.tlog
-¦   ¦   ¦   ¦               CL.9084.write.1.tlog
+¦   ¦   ¦   ¦               CL.4348.write.1.tlog
 ¦   ¦   ¦   ¦               CL.command.1.tlog
 ¦   ¦   ¦   ¦               Cl.items.tlog
 ¦   ¦   ¦   ¦               CL.read.1.tlog
@@ -755,6 +765,7 @@ C:.
 ¦   ¦   ¦   ¦       ¦   boss_ambassador_flamelash.obj
 ¦   ¦   ¦   ¦       ¦   boss_ambassador_hellmaw.obj
 ¦   ¦   ¦   ¦       ¦   boss_anetheron.obj
+¦   ¦   ¦   ¦       ¦   boss_antusul.obj
 ¦   ¦   ¦   ¦       ¦   boss_anubrekhan.obj
 ¦   ¦   ¦   ¦       ¦   boss_anzu.obj
 ¦   ¦   ¦   ¦       ¦   boss_arcanist_doan.obj
@@ -767,15 +778,18 @@ C:.
 ¦   ¦   ¦   ¦       ¦   boss_azuregos.obj
 ¦   ¦   ¦   ¦       ¦   boss_baroness_anastari.obj
 ¦   ¦   ¦   ¦       ¦   boss_baron_geddon.obj
+¦   ¦   ¦   ¦       ¦   boss_bazil_thredd.obj
 ¦   ¦   ¦   ¦       ¦   boss_blackheart_the_inciter.obj
 ¦   ¦   ¦   ¦       ¦   boss_black_stalker.obj
 ¦   ¦   ¦   ¦       ¦   boss_bloodboil.obj
 ¦   ¦   ¦   ¦       ¦   boss_broggok.obj
 ¦   ¦   ¦   ¦       ¦   boss_broodlord_lashlayer.obj
+¦   ¦   ¦   ¦       ¦   boss_bruegal_ironknuckle.obj
 ¦   ¦   ¦   ¦       ¦   boss_brutallus.obj
 ¦   ¦   ¦   ¦       ¦   boss_bug_trio.obj
 ¦   ¦   ¦   ¦       ¦   boss_buru.obj
 ¦   ¦   ¦   ¦       ¦   boss_cannon_master_willey.obj
+¦   ¦   ¦   ¦       ¦   boss_chief_ukorz_sandscalp.obj
 ¦   ¦   ¦   ¦       ¦   boss_chromaggus.obj
 ¦   ¦   ¦   ¦       ¦   boss_chrono_lord_deja.obj
 ¦   ¦   ¦   ¦       ¦   boss_coren_direbrew.obj
@@ -785,6 +799,7 @@ C:.
 ¦   ¦   ¦   ¦       ¦   boss_darkmaster_gandling.obj
 ¦   ¦   ¦   ¦       ¦   boss_darkweaver_syth.obj
 ¦   ¦   ¦   ¦       ¦   boss_dathrohan_balnazzar.obj
+¦   ¦   ¦   ¦       ¦   boss_dextren_ward.obj
 ¦   ¦   ¦   ¦       ¦   boss_doomlord_kazzak.obj
 ¦   ¦   ¦   ¦       ¦   boss_doomwalker.obj
 ¦   ¦   ¦   ¦       ¦   boss_ebonroc.obj
@@ -799,6 +814,7 @@ C:.
 ¦   ¦   ¦   ¦       ¦   boss_firemaw.obj
 ¦   ¦   ¦   ¦       ¦   boss_flamegor.obj
 ¦   ¦   ¦   ¦       ¦   boss_four_horsemen.obj
+¦   ¦   ¦   ¦       ¦   boss_gahzrilla.obj
 ¦   ¦   ¦   ¦       ¦   boss_garr.obj
 ¦   ¦   ¦   ¦       ¦   boss_gehennas.obj
 ¦   ¦   ¦   ¦       ¦   boss_general_angerforge.obj
@@ -811,6 +827,7 @@ C:.
 ¦   ¦   ¦   ¦       ¦   boss_gyth.obj
 ¦   ¦   ¦   ¦       ¦   boss_hakkar.obj
 ¦   ¦   ¦   ¦       ¦   boss_halazzi.obj
+¦   ¦   ¦   ¦       ¦   boss_hamhock.obj
 ¦   ¦   ¦   ¦       ¦   boss_harbinger_skyriss.obj
 ¦   ¦   ¦   ¦       ¦   boss_headless_horseman.obj
 ¦   ¦   ¦   ¦       ¦   boss_heigan.obj
@@ -829,6 +846,7 @@ C:.
 ¦   ¦   ¦   ¦       ¦   boss_jeklik.obj
 ¦   ¦   ¦   ¦       ¦   boss_kaelthas.obj
 ¦   ¦   ¦   ¦       ¦   boss_kalecgos.obj
+¦   ¦   ¦   ¦       ¦   boss_kam_deepfury.obj
 ¦   ¦   ¦   ¦       ¦   boss_kazrogal.obj
 ¦   ¦   ¦   ¦       ¦   boss_kazzak.obj
 ¦   ¦   ¦   ¦       ¦   boss_kelidan_the_breaker.obj
@@ -892,6 +910,7 @@ C:.
 ¦   ¦   ¦   ¦       ¦   boss_sapphiron.obj
 ¦   ¦   ¦   ¦       ¦   boss_sartura.obj
 ¦   ¦   ¦   ¦       ¦   boss_selin_fireheart.obj
+¦   ¦   ¦   ¦       ¦   boss_sezzziz.obj
 ¦   ¦   ¦   ¦       ¦   boss_shade_of_akama.obj
 ¦   ¦   ¦   ¦       ¦   boss_shade_of_aran.obj
 ¦   ¦   ¦   ¦       ¦   boss_shazzrah.obj
@@ -902,12 +921,14 @@ C:.
 ¦   ¦   ¦   ¦       ¦   boss_supremus.obj
 ¦   ¦   ¦   ¦       ¦   boss_swamplord_muselek.obj
 ¦   ¦   ¦   ¦       ¦   boss_talon_king_ikiss.obj
+¦   ¦   ¦   ¦       ¦   boss_targorr_the_dread.obj
 ¦   ¦   ¦   ¦       ¦   boss_temporus.obj
 ¦   ¦   ¦   ¦       ¦   boss_terestian_illhoof.obj
 ¦   ¦   ¦   ¦       ¦   boss_terokk.obj
 ¦   ¦   ¦   ¦       ¦   boss_teron_gorefiend.obj
 ¦   ¦   ¦   ¦       ¦   boss_thaddius.obj
 ¦   ¦   ¦   ¦       ¦   boss_thekal.obj
+¦   ¦   ¦   ¦       ¦   boss_theka_the_martyr.obj
 ¦   ¦   ¦   ¦       ¦   boss_thermaplugg.obj
 ¦   ¦   ¦   ¦       ¦   boss_the_lurker_below.obj
 ¦   ¦   ¦   ¦       ¦   boss_thorngrin_the_tender.obj
@@ -1869,7 +1890,7 @@ C:.
 ¦   ¦   ¦   ¦       ¦   WorldRunnable.obj
 ¦   ¦   ¦   ¦       ¦   
 ¦   ¦   ¦   ¦       +---WorldServer.tlog
-¦   ¦   ¦   ¦               CL.3812.write.1.tlog
+¦   ¦   ¦   ¦               CL.1052.write.1.tlog
 ¦   ¦   ¦   ¦               CL.command.1.tlog
 ¦   ¦   ¦   ¦               Cl.items.tlog
 ¦   ¦   ¦   ¦               CL.read.1.tlog
@@ -1918,7 +1939,7 @@ C:.
 ¦   ¦   ¦   ¦       ¦   
 ¦   ¦   ¦   ¦       +---AuthServer.tlog
 ¦   ¦   ¦   ¦               AuthServer.lastbuildstate
-¦   ¦   ¦   ¦               CL.8332.write.1.tlog
+¦   ¦   ¦   ¦               CL.2204.write.1.tlog
 ¦   ¦   ¦   ¦               CL.command.1.tlog
 ¦   ¦   ¦   ¦               Cl.items.tlog
 ¦   ¦   ¦   ¦               CL.read.1.tlog
@@ -5915,6 +5936,14 @@ C:.
     ¦   ¦       ¦   ¦   ¦       shadowfang_keep.cpp
     ¦   ¦       ¦   ¦   ¦       shadowfang_keep.h
     ¦   ¦       ¦   ¦   ¦       
+    ¦   ¦       ¦   ¦   +---stockade
+    ¦   ¦       ¦   ¦   ¦       boss_bazil_thredd.cpp
+    ¦   ¦       ¦   ¦   ¦       boss_bruegal_ironknuckle.cpp
+    ¦   ¦       ¦   ¦   ¦       boss_dextren_ward.cpp
+    ¦   ¦       ¦   ¦   ¦       boss_hamhock.cpp
+    ¦   ¦       ¦   ¦   ¦       boss_kam_deepfury.cpp
+    ¦   ¦       ¦   ¦   ¦       boss_targorr_the_dread.cpp
+    ¦   ¦       ¦   ¦   ¦       
     ¦   ¦       ¦   ¦   +---stratholme
     ¦   ¦       ¦   ¦   ¦       boss_baroness_anastari.cpp
     ¦   ¦       ¦   ¦   ¦       boss_cannon_master_willey.cpp
@@ -6090,6 +6119,11 @@ C:.
     ¦   ¦       ¦   ¦   ¦       wailing_cavernsScripts.cpp
     ¦   ¦       ¦   ¦   ¦       
     ¦   ¦       ¦   ¦   +---zulfarrak
+    ¦   ¦       ¦   ¦           boss_antusul.cpp
+    ¦   ¦       ¦   ¦           boss_chief_ukorz_sandscalp.cpp
+    ¦   ¦       ¦   ¦           boss_gahzrilla.cpp
+    ¦   ¦       ¦   ¦           boss_sezzziz.cpp
+    ¦   ¦       ¦   ¦           boss_theka_the_martyr.cpp
     ¦   ¦       ¦   ¦           boss_zumrah.cpp
     ¦   ¦       ¦   ¦           instance_zulfarrak.cpp
     ¦   ¦       ¦   ¦           zulfarrak.cpp

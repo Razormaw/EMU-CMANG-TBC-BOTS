@@ -68,6 +68,7 @@
 #include "Maps/TransportMgr.h"
 #include "Anticheat/Anticheat.hpp"
 #include "Spells/SpellStacking.h"
+#include "Chat/ChannelMgr.h"
 
 #ifdef BUILD_AHBOT
  #include "AuctionHouseBot/AuctionHouseBot.h"
@@ -1501,6 +1502,30 @@ void World::SetInitialWorldSettings()
     auctionbot.Init();
 #endif
 #endif
+
+    // --- INICIO: CREACIÓN DE CANAL PERSONALIZADO ESTÁTICO ---
+    sLog.outString("Initializing custom static channel: taberna...");
+    
+    // Intentamos crearlo para la Alianza
+    if (ChannelMgr* allianceMgr = channelMgr(ALLIANCE))
+    {
+        // GetJoinChannel crea el canal si no existe. El '0' es el ID (0 para canales personalizados)
+        if (Channel* chan = allianceMgr->GetJoinChannel("taberna", 0))
+        {
+            // SetStatic(true, true) lo convierte en un canal global sin dueño ni moderadores
+            chan->SetStatic(true, true);
+        }
+    }
+
+    // Intentamos crearlo para la Horda (Si tu servidor es inter-facción, simplemente usará el mismo)
+    if (ChannelMgr* hordeMgr = channelMgr(HORDE))
+    {
+        if (Channel* chan = hordeMgr->GetJoinChannel("taberna", 0))
+        {
+            chan->SetStatic(true, true);
+        }
+    }
+    // --- FIN: CREACIÓN DE CANAL PERSONALIZADO ESTÁTICO ---
 
     sLog.outString("---------------------------------------");
     sLog.outString("      CMANGOS: World initialized       ");

@@ -66,6 +66,11 @@ extern void AddSC_instance_deadmines();
 extern void AddSC_gnomeregan();                             // gnomeregan
 extern void AddSC_boss_thermaplugg();
 extern void AddSC_instance_gnomeregan();
+extern void AddSC_boss_grubbis();
+extern void AddSC_boss_viscous_fallout();
+extern void AddSC_boss_electrocutioner_6000();
+extern void AddSC_boss_crowd_pummeler_9_60();
+extern void AddSC_boss_dark_iron_ambassador();
 extern void AddSC_boss_attumen();                           // karazhan
 extern void AddSC_boss_curator();
 extern void AddSC_boss_maiden_of_virtue();
@@ -118,6 +123,9 @@ extern void AddSC_boss_herod();
 extern void AddSC_boss_mograine_and_whitemane();
 extern void AddSC_boss_headless_horseman();
 extern void AddSC_instance_scarlet_monastery();
+extern void AddSC_boss_interrogator_vishas();
+extern void AddSC_boss_bloodmage_thalnos();
+extern void AddSC_boss_high_inquisitor_fairbanks();
 extern void AddSC_boss_darkmaster_gandling();               // scholomance
 extern void AddSC_boss_jandicebarov();
 extern void AddSC_instance_scholomance();
@@ -442,6 +450,11 @@ void AddScripts()
     AddSC_gnomeregan();                                     // gnomeregan
     AddSC_boss_thermaplugg();
     AddSC_instance_gnomeregan();
+	AddSC_boss_grubbis();
+    AddSC_boss_viscous_fallout();
+    AddSC_boss_electrocutioner_6000();
+    AddSC_boss_crowd_pummeler_9_60();
+    AddSC_boss_dark_iron_ambassador();
     AddSC_boss_attumen();                                   // karazhan
     AddSC_boss_curator();
     AddSC_boss_maiden_of_virtue();
@@ -494,6 +507,9 @@ void AddScripts()
     AddSC_boss_mograine_and_whitemane();
     AddSC_boss_headless_horseman();
     AddSC_instance_scarlet_monastery();
+	AddSC_boss_interrogator_vishas();
+    AddSC_boss_bloodmage_thalnos();
+    AddSC_boss_high_inquisitor_fairbanks();
     AddSC_boss_darkmaster_gandling();                       // scholomance
     AddSC_boss_jandicebarov();
     AddSC_instance_scholomance();

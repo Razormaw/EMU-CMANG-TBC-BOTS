@@ -2,6 +2,11 @@
 #include "playerbot/playerbot.h"
 #include <stdarg.h>
 #include <iomanip>
+#include "Chat/ChannelMgr.h"
+#include "Chat/Channel.h"
+#include "Database/DatabaseEnv.h"
+#include <vector>
+#include <mutex>
 
 #include "playerbot/AiFactory.h"
 
@@ -53,6 +58,50 @@
 #endif
 #include "AI/ScriptDevAI/ScriptDevAIMgr.h"
 #include "strategy/values/GuildValues.h"
+
+namespace TabernaChat
+{
+    static std::vector<std::string> s_phrases;
+    static time_t s_lastLoad = 0;
+    static std::mutex s_mutex;
+
+    static void LoadPhrasesLocked()
+    {
+        const time_t now = time(nullptr);
+        if (now - s_lastLoad < 300)   // Recarga automática cada 5 minutos
+            return;
+        s_lastLoad = now;
+
+        std::vector<std::string> temp;
+        auto result = WorldDatabase.Query("SELECT phrase FROM custom_taberna_phrases WHERE enabled = 1");
+        if (result)
+        {
+            do
+            {
+                Field* fields = result->Fetch();
+                std::string str = fields[0].GetCppString();
+                if (!str.empty())
+                    temp.push_back(str);
+            } while (result->NextRow());
+        }
+
+        if (!temp.empty() && temp.size() != s_phrases.size())
+        {
+            sLog.outString(">> TabernaChat: %u frases cargadas desde la BD.", (uint32)temp.size());
+            s_phrases.swap(temp);
+        }
+    }
+
+    static bool GetRandomPhrase(std::string& out)
+    {
+        std::lock_guard<std::mutex> guard(s_mutex);
+        LoadPhrasesLocked();
+        if (s_phrases.empty())
+            return false;
+        out = s_phrases[urand(0, (uint32)s_phrases.size() - 1)];
+        return true;
+    }
+}
 
 using namespace ai;
 
@@ -253,7 +302,38 @@ PlayerbotAI::~PlayerbotAI()
 
 void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
 {
-    AiObjectContext* context = aiObjectContext;
+
+    // === CANAL TABERNA: auto-join y charla (throttle 30s por bot) ===
+    {
+        static std::map<ObjectGuid, time_t> s_tabernaCheck;
+        time_t now = time(0);
+        time_t& last = s_tabernaCheck[bot->GetObjectGuid()];
+        if (now - last >= 30)   // solo revisa cada 30s por bot
+        {
+            last = now;
+            if (bot->IsInWorld() && bot->IsAlive() && !bot->InBattleGround())
+            {
+                ChannelMgr* mgr = channelMgr(bot->GetTeam());
+                if (mgr)
+                {
+                    Channel* chan = mgr->GetJoinChannel("taberna", 0);  // <- AQUI nace "chan"
+                    if (chan)
+                    {
+                        chan->Join(bot, "");
+
+                        if (urand(0, 100) < 5)   // 5% de probabilidad de hablar
+                        {
+                            std::string texto;
+                            if (TabernaChat::GetRandomPhrase(texto))
+                                chan->Say(bot, texto.c_str(), LANG_UNIVERSAL);
+                        }
+                    }
+                }
+            }
+        }
+    }
+	
+	AiObjectContext* context = aiObjectContext;
     std::string mapString = WorldPosition(bot).isInstance() ? "I" : std::to_string(bot->GetMapId());
     auto pmo = sPerformanceMonitor.start(PERF_MON_TOTAL, "PlayerbotAI::UpdateAI " + mapString, nullptr, bot->GetMapId(), bot->GetInstanceId());
     
