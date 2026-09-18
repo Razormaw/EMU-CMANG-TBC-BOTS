@@ -677,8 +677,14 @@ void Channel::Say(Player* player, const char* text, uint32 lang)
         SendMessage(data, (moderator ? ObjectGuid() : guid));
 	
 	    // === HOOK TABERNA: capturar cuando un JUGADOR REAL habla ===
-    if (player && !player->GetPlayerbotAI() && m_name == "taberna")
+		#ifdef BUILD_PLAYERBOTS
+		if (player && !player->GetPlayerbotAI() && m_name == "taberna")
         sTabernaConvMgr.OnPlayerSpeaks(player, this, text);
+		#else
+		// Cuando BUILD_PLAYERBOTS no está definido, permitir todos los jugadores
+		if (player && m_name == "taberna")
+        sTabernaConvMgr.OnPlayerSpeaks(player, this, text);
+		#endif
 }
 
 void Channel::Invite(Player* player, const char* targetName)

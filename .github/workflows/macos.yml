@@ -7,7 +7,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
   REPO_DIR: ${{github.workspace}}
   BUILD_DIR: ${{github.workspace}}/bin/builddir
@@ -64,33 +63,4 @@ jobs:
       - name: sccache stats
         if: always()
         run: sccache --show-stats
-
-  notify:
-    permissions:
-      contents: none
-    name: Send Notification to Discord on Failure
-    runs-on: ubuntu-latest
-    needs:
-      - build
-    if: failure()
-
-    steps:
-      - name: Setup Environmental Variables
-        run: |
-          echo "GIT_BRANCH=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
-          echo "GIT_SHORT_SHA=`echo ${GITHUB_SHA} | cut -c1-8`" >> $GITHUB_ENV
-
-      - name: Notify
-        uses: rjstone/discord-webhook-notify@v2.3.0
-        with:
-          severity: error
-          description: |
-            **macOS Build Failed**
-          details: |
-            - **Branch:** ${{env.GIT_BRANCH}}
-            - **Pusher:** ${{github.event.pusher.name}}
-            - **Author:** ${{github.event.head_commit.author.name}}
-            - **Commit:** [${{github.repository}}/${{env.GIT_SHORT_SHA}}](${{github.server_url}}/${{ github.repository }}/commit/${{github.sha}})
-            - **Build Log:** [actions/runs/${{github.run_id}}](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}})
-          footer: CMaNGOS Developers Notified!
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+        

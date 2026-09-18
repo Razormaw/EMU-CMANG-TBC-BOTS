@@ -23,13 +23,12 @@ jobs:
 
     strategy:
       matrix:
-       include:
+        include:
           - os: ubuntu-22.04
             COMPILER_CC: gcc-12
             COMPILER_PP: g++-12
             USE_PCH: ON
             EXTRA_BUILD: ""
-
           - os: ubuntu-22.04
             COMPILER_CC: clang
             COMPILER_PP: clang++
@@ -57,18 +56,10 @@ jobs:
         uses: MarkusJx/install-boost@v2.6.0
         id: install-boost
         with:
-          # REQUIRED: Specify the required boost version
-          # A list of supported versions can be found here:
-          # https://github.com/MarkusJx/prebuilt-boost/blob/main/versions-manifest.json
           boost_version: ${{env.BOOST_VERSION}}
-          # OPTIONAL: Specify a platform version
           platform_version: ${{env.BOOST_PLATFORM_VERSION}}
-          # OPTIONAL: Specify a toolset
           toolset: ${{env.COMPILER_CC}}
-          # OPTIONAL: Specify an architecture
           arch: x86
-          # NOTE: If a boost version matching all requirements cannot be found,
-          # this build step will fail
 
       - name: Configure
         env:
@@ -77,44 +68,14 @@ jobs:
           BOOST_ROOT: ${{ steps.install-boost.outputs.BOOST_ROOT }}
         run: cmake -DBoost_ARCHITECTURE=-x64 -DPCH=${{env.USE_PCH}} -DCMAKE_INSTALL_PREFIX=/home/runner/work ${{env.EXTRA_BUILD}}-DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -B ${{env.BUILD_DIR}} -S ${{env.REPO_DIR}}
 
-
       - name: Build
         env:
           MAKEFLAGS: "-j8"
         run: |
-            cmake --build ${{env.BUILD_DIR}} --config ${{env.BUILD_TYPE}} --parallel
-            cmake --install ${{env.BUILD_DIR}}
+          cmake --build ${{env.BUILD_DIR}} --config ${{env.BUILD_TYPE}} --parallel
+          cmake --install ${{env.BUILD_DIR}}
 
       - name: sccache stats
         if: always()
         run: sccache --show-stats
-
-  notify:
-    name: Send Notification to Discord on Failure
-    runs-on: ubuntu-latest
-    permissions:
-      contents: none
-    needs: # make sure the notification is sent AFTER the jobs you want included have completed
-      - build
-    if: failure()
-
-    steps:
-      - name: Setup Environmental Variables
-        run: |
-          echo "GIT_BRANCH=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
-          echo "GIT_SHORT_SHA=`echo ${GITHUB_SHA} | cut -c1-8`" >> $GITHUB_ENV
-
-      - name: Notify
-        uses: rjstone/discord-webhook-notify@v2.3.0
-        with:
-          severity: error
-          description: |
-            **Linux Build Failed**
-          details: |
-            - **Branch:** ${{env.GIT_BRANCH}}
-            - **Pusher:** ${{github.event.pusher.name}}
-            - **Author:** ${{github.event.head_commit.author.name}}
-            - **Commit:** [${{github.repository}}/${{env.GIT_SHORT_SHA}}](${{github.server_url}}/${{ github.repository }}/commit/${{github.sha}})
-            - **Build Log:** [actions/runs/${{github.run_id}}](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}})
-          footer: CMaNGOS Developers Notified!
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+        
