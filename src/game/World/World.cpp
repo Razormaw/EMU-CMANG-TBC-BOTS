@@ -20,6 +20,7 @@
     \ingroup world
 */
 
+#include "PlayerBot/playerbot/TabernaConversationMgr.h"   // ✅ Ruta desde src/game
 #include "World/World.h"
 #include "Database/DatabaseEnv.h"
 #include "Config/Config.h"
@@ -1527,10 +1528,17 @@ void World::SetInitialWorldSettings()
     }
     // --- FIN: CREACIÓN DE CANAL PERSONALIZADO ESTÁTICO ---
 
-    sLog.outString("---------------------------------------");
-    sLog.outString("      CMANGOS: World initialized       ");
-    sLog.outString("---------------------------------------");
-    sLog.outString();
+// ========================================================
+// NUEVO: Arrancar el manager de conversación de la taberna
+// (depende de que el canal ya exista arriba)
+// ========================================================
+sTabernaConvMgr.Start();
+sLog.outString(">> TabernaConversationMgr: iniciado");
+
+sLog.outString("---------------------------------------");
+sLog.outString("      CMANGOS: World initialized       ");
+sLog.outString("---------------------------------------");
+sLog.outString();
 
     uint32 uStartInterval = WorldTimer::getMSTimeDiff(startTime, WorldTimer::getMSTime());
     sLog.outString("SERVER STARTUP TIME: %i minutes %i seconds", uStartInterval / 60000, (uStartInterval % 60000) / 1000);

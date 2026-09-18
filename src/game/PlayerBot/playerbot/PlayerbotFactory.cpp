@@ -2947,7 +2947,18 @@ void PlayerbotFactory::Shuffle(std::vector<uint32>& items)
     }
 }
 
-void PlayerbotFactory::InitEquipment(bool incremental, bool syncWithMaster, bool progressive, bool partialUpgrade)
+// === FIX #1 (PvP/PvE): detecta piezas con resiliencia ===
+bool PlayerbotFactory::HasResilience(ItemPrototype const* proto)
+{
+    if (!proto)
+        return false;
+    for (int j = 0; j < MAX_ITEM_PROTO_STATS; ++j)
+        if (proto->ItemStat[j].ItemStatValue && proto->ItemStat[j].ItemStatType == ITEM_MOD_RESILIENCE_RATING)
+            return true;
+    return false;
+}
+
+void PlayerbotFactory::InitEquipment(bool incremental, bool syncWithMaster, bool progressive, bool partialUpgrade, bool pvpSet)
 {
     uint32 oldGS = ai->GetEquipGearScore(bot, false, false);
     uint32 masterGS = 0;
@@ -2965,6 +2976,8 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool syncWithMaster, bool
 
     uint32 specId = sRandomItemMgr.GetPlayerSpecId(bot);
     if (specId == 0)
+	 // === MODO PvP: si pvpSet, consultamos pesos con bonus de resiliencia (spec + 100) ===
+    const uint32 specQuery = specId + (pvpSet ? 100 : 0);
         return;
 
     // choose type of weapon
@@ -3344,6 +3357,13 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool syncWithMaster, bool
 
                     if (std::find(lockedItems.begin(), lockedItems.end(), proto->ItemId) != lockedItems.end())
                         continue;
+					
+					// === FIX #1: set PvE nunca lleva resiliencia; set PvP solo piezas PvP ===
+					if (!pvpSet && HasResilience(proto))
+					continue;
+					if (pvpSet && proto->Quality > ITEM_QUALITY_NORMAL && !HasResilience(proto) &&
+					(proto->Class == ITEM_CLASS_ARMOR || proto->Class == ITEM_CLASS_WEAPON))
+					continue;
 
                     // skip not available items
                     // TO DO: Replace this with a db query
@@ -3509,8 +3529,11 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool syncWithMaster, bool
                                 continue;
                         }
 
-                    if (incremental && oldItem && oldStatValue >= newStatValue && oldStatValue > 1)
-                        continue;
+					// === FIX #2/#4/#5: NUNCA sustituir por algo de menor o igual valor.
+					// Protege el loot de raid/mazmorra ya equipado y rompe el ciclo
+					// "quita pieza buena -> equipa peor -> desencanta la buena". ===
+					if (oldItem && oldStatValue >= newStatValue)
+					continue;
 
                     // replace grey items right away
                     if ((incremental || progressiveGear) && oldItem && oldProto->Quality < ITEM_QUALITY_NORMAL && proto->Quality < ITEM_QUALITY_NORMAL && level > 5)

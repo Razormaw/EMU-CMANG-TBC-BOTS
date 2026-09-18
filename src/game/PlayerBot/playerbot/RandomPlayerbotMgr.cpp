@@ -878,6 +878,28 @@ void RandomPlayerbotMgr::ScaleBotActivity()
 
 void RandomPlayerbotMgr::LoginFreeBots()
 {
+	
+	// === INICIO CUSTOM: login forzado de bots siempre-online (CervezIA, Qwenzia) ===
+    for (const std::string& name : sPlayerbotAIConfig.toggleAlwaysOnlineChars)
+    {
+        ObjectGuid guid = sObjectMgr.GetPlayerGuidByName(name);   // búsqueda insensible a mayúsculas
+        if (!guid)
+            continue;
+
+        if (GetPlayerBot(guid.GetCounter()))                      // ya está en el mundo
+            continue;
+
+        uint32 accountId = sObjectMgr.GetPlayerAccountIdByGUID(guid);
+
+        if (!sPlayerbotAIConfig.IsFreeAltBot(guid.GetCounter()))
+            sPlayerbotAIConfig.freeAltBots.push_back(std::make_pair(accountId, guid.GetCounter()));
+
+        SetValue(guid.GetCounter(), "always", 1);                 // BotAlwaysOnline::ACTIVE
+        AddPlayerBot(guid.GetCounter(), accountId);
+        sLog.outString("Always-online bot logged in: %s", name.c_str());
+    }
+    // === FIN CUSTOM ===
+	
     if (!sPlayerbotAIConfig.freeAltBots.empty() && sPlayerbotAIConfig.botAutologin != BotAutoLogin::LOGIN_ONLY_ALWAYS_ACTIVE)
     {
         std::vector<std::pair<uint32, uint32>> botsToRemove;
@@ -3656,6 +3678,61 @@ void RandomPlayerbotMgr::OnPlayerLogin(Player* player)
         players[player->GetGUIDLow()] = player;
         sLog.outDebug("Including non-random bot player %s into random bot update", player->GetName());
     }
+	            // === AUTO-ADD BOTS PERMANENTES AL GRUPO DE GALCYND (VERSIÓN FUERZA BRUTA) ===
+    if (std::string(player->GetName()) == "Galcynd")
+    {
+        static const std::vector<std::string> autoAddBots = {"CervezIA", "Qwenzia"};
+
+        // Crear o obtener el grupo de Galcynd
+        Group* group = player->GetGroup();
+        if (!group)
+        {
+            group = new Group();
+            group->Create(player->GetObjectGuid(), player->GetName());
+            sObjectMgr.AddGroup(group);
+            sLog.outString("Created group for %s", player->GetName());
+        }
+
+        for (const std::string& botName : autoAddBots)
+        {
+            ObjectGuid botGuid = sObjectMgr.GetPlayerGuidByName(botName);
+            if (!botGuid)
+                continue;
+
+            Player* bot = sObjectMgr.GetPlayer(botGuid, false);
+            if (!bot)
+                continue;
+
+            // Si el bot está en OTRO grupo, sacarlo
+            if (bot->GetGroup() && bot->GetGroup() != group)
+            {
+                bot->GetGroup()->RemoveMember(botGuid, 0);
+                sLog.outString("Removed %s from their previous group", botName.c_str());
+            }
+
+            // Añadir al grupo de Galcynd si no está ya
+            if (!group->IsMember(botGuid))
+            {
+                if (group->AddMember(botGuid, botName.c_str()))
+                {
+                    PlayerbotAI* ai = bot->GetPlayerbotAI();
+                    if (ai)
+                    {
+                        ai->SetMaster(player);
+                        sLog.outString("Auto-added bot %s to %s's group as member", botName.c_str(), player->GetName());
+                    }
+                }
+            }
+        }
+
+        // Asegurar que Galcynd sea el líder del grupo
+        if (group->GetLeaderGuid() != player->GetObjectGuid())
+        {
+            group->ChangeLeader(player->GetObjectGuid());
+            sLog.outString("Set %s as group leader", player->GetName());
+        }
+    }
+    // === FIN AUTO-ADD ===
 }
 
 void RandomPlayerbotMgr::OnPlayerLoginError(uint32 bot)

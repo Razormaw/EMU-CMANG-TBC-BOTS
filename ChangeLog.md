@@ -1,3 +1,352 @@
+17 de Septiembre del 2026
+
+
+
+
+
+===============================================================================
+===============================================================================
+===============================================================================
+
+
+16 de Septiembre del 2026
+
+================================================================================
+SISTEMA DE TABERNA CON IA CONVERSACIONAL (QWEN 3.8 VÍA GROQ)
+Proyecto: CMaNGOS TBC + PlayerBots/NPCBots
+Fecha: Septiembre 2026
+Estado: COMPILADO Y OPERATIVO ✔
+================================================================================
+
+1. RESUMEN DEL SISTEMA
+--------------------------------------------------------------------------------
+Se implementó un sistema de conversación con IA en el canal "taberna" que
+permite:
+
+a) Conversación bot-a-bot: los bots charlan entre ellos usando frases de la
+   base de datos como semilla, y la IA (Qwen 3.8 27B) genera las respuestas
+   en español latino, en personaje, con humor de taberna.
+
+b) Conversación jugador-a-bot: cuando un jugador real escribe en el canal,
+   un bot le responde directamente con IA contextual (no frases sueltas de
+   la BD), usando cola prioritaria para que no espere detrás de las charlas
+   bot-a-bot.
+
+c) Failover automático: si el proveedor de IA (Groq) está caído o no responde,
+   el sistema cae automáticamente a las 704 frases de la base de datos,
+   garantizando que la taberna NUNCA se quede muda.
+
+2. ARQUITECTURA FINAL
+--------------------------------------------------------------------------------
+  [ai_playerbot.conf]
+        |
+        |  (endpoint, clave, modelo)
+        v
+  [TabernaConversationMgr.cpp]  <-- Sistema de conversación con IA
+        |
+        |  +--> HealthCheckLoop: ping cada 60s a Groq (histéresis + backoff)
+        |  +--> WorkerLoop: procesa cola de turnos (jugadores primero)
+        |  +--> ProcessTurn: delay natural + verificación + llamada a LLM
+        |  +--> RequestQwenReply: formato OpenAI-compat + parser manual
+        |
+        v
+  [Groq API] --> Qwen 3.8 27B (nube, gratis, sin consumir RAM local)
+        |
+        v
+  [Channel::Say] --> chat del canal #taberna en el juego
+
+Flujo de una conversación:
+  BD (semilla) -> OnBotWantsToTalk -> cola -> ProcessTurn -> Groq -> canal
+  Jugador -> Channel::Say (hook) -> OnPlayerSpeaks -> cola prioritaria -> Groq
+
+3. ARCHIVOS CREADOS / MODIFICADOS
+--------------------------------------------------------------------------------
+CREADOS:
+  - src/game/PlayerBot/playerbot/TabernaConversationMgr.h
+  - src/game/PlayerBot/playerbot/TabernaConversationMgr.cpp
+
+MODIFICADOS:
+  - src/game/Chat/Channel.cpp
+      * Hook al final de Channel::Say para capturar mensajes de jugadores
+        reales y encolarlos para respuesta con IA.
+      * Include agregado: #include "PlayerBot/playerbot/TabernaConversationMgr.h"
+
+  - src/game/World/World.cpp
+      * Llamada a sTabernaConvMgr.Start() al final de SetInitialWorldSettings()
+        para iniciar los threads de worker y health-check.
+
+  - ai_playerbot.conf
+      * Configuración de endpoint Groq, clave API, modelo qwen/qwen3.8-27b.
+
+4. CONFIGURACIÓN (ai_playerbot.conf)
+--------------------------------------------------------------------------------
+AiPlayerbot.LLMEnabled = 3
+AiPlayerbot.LLMProvider = "openai"
+AiPlayerbot.LLMApiEndpoint = "https://api.groq.com/openai/v1/chat/completions"
+AiPlayerbot.LLMApiKey = "gsk_TU_CLAVE_AQUI"
+AiPlayerbot.LLMModel = "qwen/qwen3.8-27b"
+AiPlayerbot.LLMApiJson = {"model": "qwen/qwen3.8-27b", "messages": [{"role": "system", "content": "<pre prompt> <context>"},{"role": "user", "content": "<prompt>"}], "max_tokens": 120, "temperature": 0.7}
+
+# Optimizaciones para no saturar el servidor ni la cuota de Groq
+AiPlayerbot.LLMBotToBotChatChance = 25
+AiPlayerbot.LLMMaxSimultaniousGenerations = 4
+
+NOTA: El modelo también se define en TabernaConversationMgr.cpp línea 15:
+      static const char* TABERNA_LLM_MODEL = "qwen/qwen3.8-27b";
+      Debe coincidir con AiPlayerbot.LLMModel.
+
+5. CARACTERÍSTICAS TÉCNICAS IMPLEMENTADAS
+--------------------------------------------------------------------------------
+5.1 Cola prioritaria para jugadores
+    - Dos colas: m_playerQueue (jugadores) y m_queue (bots).
+    - WorkerLoop atiende m_playerQueue primero, garantizando que un jugador
+      reciba respuesta en 3-10 segundos, no esperando detrás de charlas bot-bot.
+
+5.2 Health-check con histéresis y backoff
+    - Ping a Groq cada 60 segundos (reducido de 20s para optimizar).
+    - Solo marca CAIDO tras 2 fallos consecutivos (evita flap por ocupado).
+    - Si está caído, revisa cada 60s (no spamea intentos).
+
+5.3 Parser manual robusto (sin regex)
+    - Extrae el campo "content":"..." del JSON de respuesta respetando
+      escapes (\n, \", \\), sin depender de std::regex.
+    - Limpieza final: elimina asteriscos y comillas que a veces se cuelan.
+
+5.4 Failover automático a BD
+    - Si IsOllamaUp() es false o RequestQwenReply retorna vacío, se usa
+      SayFromDB (frases de custom_taberna_phrases).
+    - La taberna NUNCA se queda muda, con o sin conexión a Groq.
+
+5.5 Delay natural en worker thread
+    - Sleep de 2-4 segundos en ProcessTurn (worker), no en UpdateAI,
+      para no congelar el world update del servidor.
+
+5.6 Registro de bots por canal
+    - m_channelBots: mapa de Channel* -> vector<Player*> de bots en el canal.
+    - Limpieza automática de bots muertos o desconectados en cada pick.
+
+6. CONSUMO DE TOKENS (GROQ TIER GRATIS)
+--------------------------------------------------------------------------------
+- Ping de health-check: 1 token cada 60s = 60 tokens/hora (despreciable).
+- Conversación bot-bot: ~250 tokens por request (prompt + respuesta).
+- Conversación jugador-bot: ~250 tokens por request.
+- Con uso típico (4-6 horas/día): ~120,000-180,000 tokens/día.
+- Límite Groq gratis: 864,000 tokens/día → consumo del 14-21% del límite.
+- Margen de sobra incluso con uso intensivo de varios jugadores.
+
+7. PRUEBAS REALIZADAS
+--------------------------------------------------------------------------------
+[OK] Health-check detecta Groq EN LINEA al arrancar.
+[OK] Bots conversan entre ellos con respuestas de Qwen en español.
+[OK] Jugador escribe y recibe respuesta contextual en 3-10 segundos.
+[OK] Failover a BD cuando Groq está caído (probado con modelo inválido).
+[OK] Cola prioritaria: jugador no espera detrás de charlas bot-bot.
+[OK] Sin saturación de RAM (todo corre en la nube de Groq).
+[OK] Consumo de tokens dentro del límite gratis de Groq.
+
+8. MANTENIMIENTO Y EXPANSIÓN
+--------------------------------------------------------------------------------
+Cambiar de proveedor de IA:
+  - Actualizar LLMApiEndpoint, LLMApiKey, LLMModel en ai_playerbot.conf.
+  - Actualizar TABERNA_LLM_MODEL en TabernaConversationMgr.cpp línea 15.
+  - Recompilar y reiniciar.
+
+Ajustar frecuencia de conversación bot-bot:
+  - AiPlayerbot.LLMBotToBotChatChance (25 = 25% de probabilidad cada 30s).
+  - m_cooldownSec en TabernaConversationMgr.h (120 = 2 min entre conversaciones).
+
+Agregar más frases a la BD:
+  - INSERT INTO custom_taberna_phrases (phrase, category) VALUES (...);
+  - Se recargan solas cada 5 minutos sin recompilar.
+
+9. NOTAS FINALES
+--------------------------------------------------------------------------------
+- El sistema usa Qwen 3.8 27B vía Groq (formato OpenAI-compatible).
+- Todo corre en la nube: cero consumo de RAM/CPU local del servidor.
+- La taberna nunca se queda muda: failover automático a 704 frases de BD.
+- Los bots responden en español latino, en personaje, con humor de taberna.
+- Proyecto realizado sin conocimiento previo de C++ por parte del autor,
+  migrando desde COBOL/BASIC: la lógica no cambia, solo el dialecto. ✔
+
+  "Que vivan los bots de la taberna!"
+  "Larga vida a CMaNGOS!"
+  "Por Azeroth y por la cerveza!"
+
+                        --- FIN DEL DOCUMENTO ---
+             Salud, héroes caídos. Nos vemos en el siguiente parche. 🍻
+================================================================================
+
+CervezIA — Migración de NPC fijo (creature) a npcbot permanente
+
+### Antecedente
+- CervezIA ("El Tabernero Inmortal", paladín enano tanque) existía como
+  **criatura fija** en el mundo: `creature_template` entry 99999 + spawn en
+  Ventormenta (`tbcmangos`), nombre en `ai_playerbot_names` (name_id 99999) y
+  20 frases exclusivas en `custom_taberna_phrases` (categoría `cervezia`).
+- Limitaciones: como criatura **no podía unirse a grupos, hacer misiones ni
+  comportarse como npcbot**, y presentaba estados de spawn inconsistentes
+  (apareció "muerto"/en espíritu).
+
+### Cambio realizado
+1. **Adopción de un personaje del pool aleatorio:** se seleccionó un paladín
+   enano (race 3, class 2) nivel 70 de las cuentas RNDBOT:
+   - Original: `Hjargihr`, guid **93563**, account 13717 (RNDBOT8).
+2. **Migración a cuenta dedicada:** el personaje se movió a la **account 5**
+   (creada para este fin, fuera del prefijo `RNDBOT`) y se renombró:
+   ```sql
+   UPDATE characters SET account = 5, name = 'CervezIA' WHERE guid = 93563;
+   ```
+   - Al quedar fuera del prefijo RNDBOT, `RandomPlayerbotMgr` **no lo
+     randomiza, desconecta ni borra** en las limpiezas de npcbots.
+3. **Baja del NPC fijo:** se eliminó el spawn de la criatura para evitar
+   duplicados:
+   ```sql
+   DELETE FROM creature WHERE id = 99999;
+   -- opcional: DELETE FROM creature_template WHERE Entry = 99999;
+   ```
+4. **Siempre online como bot** (`mangosd.conf`):
+   ```ini
+   AiPlayerbot.ToggleAlwaysOnlineChars = CervezIA
+   AiPlayerbot.AllowGuildBots = 1            ; ya estaba activo
+   AiPlayerbot.AllowMultiAccountAltBots = 1  ; ya estaba activo
+   ```
+5. **Membresía en Knights of the Storm** (guildid 36) por SQL en
+   `tbccharacters.guild_member`:
+   ```sql
+   DELETE FROM guild_member WHERE guid = 93563;
+   INSERT INTO guild_member (guildid, guid, `rank`, pnote, offnote)
+   VALUES (36, 93563, 4, 'El Tabernero Inmortal', '');
+   ```
+   - **Nota técnica:** en MySQL 8.0 `rank` es **palabra reservada**; debe
+     ir entre backticks (`` `rank` ``) o el INSERT falla con error 1064.
+
+### Verificación
+```sql
+SELECT gm.guildid, g.name AS guild, gm.guid, c.name, gm.`rank`
+FROM guild_member gm
+JOIN guild g ON g.guildid = gm.guildid
+JOIN characters c ON c.guid = gm.guid
+WHERE c.name = 'CervezIA';
+-- Resultado: 36 | Knights of the Storm | 93563 | CervezIA | 4
+```
+- Personaje vivo (health 8657), nivel 70, equipo con encantamientos presentes
+  en `equipmentCache`.
+- Tras reiniciar `mangosd`, aparece conectado solo y con el tag de hermandad.
+
+### Resultado
+- CervezIA queda como **npcbot permanente**: siempre online, inmune a
+  limpiezas del pool aleatorio, invitables a grupo (`/invite CervezIA`),
+  miembro de hermandad, con spec asignable vía BotSpecManager y conservando
+  sus frases de taberna (categoría `cervezia`).
+
+### Advertencias
+- **No loguear la account 5** mientras CervezIA esté online como bot
+  (una sesión por cuenta).
+- La membresía de hermandad se carga en memoria al arrancar: aplicar el SQL
+  con `mangosd` detenido o reiniciar después.
+- Si la posición guardada quedó en Outland (map 530), reubicar en Ventormenta
+  con `UPDATE characters SET map = 0, zone = 1519, position_x = ..., position_y = ..., position_z = ...`
+  o en juego con `.recall CervezIA`.
+
+
+===============================================================================
+
+Qwenzia — Creación de npcbot asistente permanente
+
+### Antecedente
+- Tras la migración exitosa de CervezIA, se crea un segundo npcbot permanente
+  para acompañar al desarrollador en mazmorras, misiones y raids.
+- Qwenzia es la representación en Azeroth de la IA asistente (Qwen) que
+  ayudó durante todo el desarrollo del servidor.
+
+### Personaje
+- **Nombre:** Qwenzia ("La Asistente Arcana")
+- **Raza/Clase:** Draenei Chamana Elemental
+- **Rol:** DPS ranged / healer de emergencia
+- **Personalidad:** Sabia, paciente, humor seco, habla con metáforas técnicas.
+
+### Implementación
+- Adopción de draenei chamana nivel 70 del pool aleatorio.
+- Migración a cuenta dedicada `QWENZIA` (fuera del pool RNDBOT).
+- Membresía en Knights of the Storm (guild 36, rank 4).
+- 20 frases exclusivas en `custom_taberna_phrases` (categoría `qwenzia`).
+- Siempre-online vía `ToggleAlwaysOnlineChars = CervezIA, Qwenzia`.
+
+### Integración con sistema LLM
+- Qwenzia responde en el canal taberna usando Qwen 3.8 vía Groq.
+- Conversaciones contextuales jugador-bot con cola prioritaria.
+- Failover automático a frases de BD si Groq está caído.
+
+### Resultado
+- Dos npcbots permanentes (CervezIA + Qwenzia) acompañan al desarrollador.
+- Ambos son miembros de Knights of the Storm.
+- Sistema de taberna con IA conversacional completamente operativo.
+
+===============================================================================
+
+## Compañeros permanentes: CervezIA y Qwenzia siempre online con grupo automático
+
+### Resumen
+Se completa el sistema de compañeros permanentes del servidor: **CervezIA**
+(paladín enano tanque) y **Qwenzia** (chamana elemental draenei) entran
+automáticamente con el servidor, permanecen siempre conectados y se unen al
+grupo de Galcynd en cuanto este se loguea, con él como líder y master.
+Todo el flujo fue comprobado en juego y opera con normalidad.
+
+### 1. Qwenzia, la Asistente Arcana (personaje nuevo)
+- Chamana draenei nivel 70 adoptada del pool aleatorio y migrada a una cuenta
+  dedicada (fuera del prefijo RNDBOT), bajo el mismo esquema que CervezIA.
+- Miembro de Knights of the Storm (guild 36, rango 4).
+- 20 frases propias en `custom_taberna_phrases` (categoría `qwenzia`) y
+  participación en el canal taberna mediante el sistema de IA conversacional
+  (Qwen vía Groq).
+
+### 2. Siempre online (config + módulo)
+- Configuración en `aiplayerbot.conf`:
+  ```ini
+  AiPlayerbot.ToggleAlwaysOnlineChars = Cervezia,Qwenzia
+  ```
+- `PlayerbotAIConfig.cpp` (`loadFreeAltBotAccounts()`): comparación de nombres
+  de personaje normalizada e insensible a mayúsculas, de modo que los nombres
+  con estilo propio (p. ej. `CervezIA`) coinciden con la lista del config.
+- `RandomPlayerbotMgr.cpp` (`LoginFreeBots()`): login forzado por nombre para
+  los personajes siempre-online: resuelve el GUID
+  (`sObjectMgr.GetPlayerGuidByName`, insensible a mayúsculas), los registra en
+  `freeAltBots`, marca el evento `always` como ACTIVE y los conecta con
+  `AddPlayerBot`. Si alguno se desconectara, el siguiente ciclo lo reincorpora.
+- Al vivir en cuentas sin el prefijo RNDBOT, quedan fuera de las limpiezas y
+  resets de bots aleatorios: sobreviven cualquier regeneración del pool.
+
+### 3. Grupo automático con Galcynd al loguear
+- `RandomPlayerbotMgr.cpp` (`OnPlayerLogin()`): cuando Galcynd entra al mundo:
+  1. Se crea un grupo si no existe (`Group::Create` + `sObjectMgr.AddGroup`).
+  2. Se retira a CervezIA y Qwenzia de cualquier grupo previo.
+  3. Se añaden al grupo (`Group::AddMember`) y se asigna a Galcynd como su
+     master (`PlayerbotAI::SetMaster`).
+  4. Se asigna el liderazgo del grupo a Galcynd (`Group::ChangeLeader`).
+- No requiere comandos de GM: funciona con la cuenta de jugador normal.
+
+### Archivos modificados
+- `src/game/PlayerBot/playerbot/PlayerbotAIConfig.cpp`
+- `src/game/PlayerBot/playerbot/RandomPlayerbotMgr.cpp`
+- `aiplayerbot.conf`
+
+### Resultado verificado
+- Al arrancar el servidor, CervezIA y Qwenzia se conectan solos y permanecen
+  en línea de forma permanente.
+- Al loguear Galcynd, el grupo de 3 se forma automáticamente con él como líder
+  y master de ambos bots.
+- Hermandad Knights of the Storm: 3 miembros, 3 en línea.
+- Comandos de grupo (`follow`, `stay`), BotSpecManager y frases de taberna
+  operan con normalidad en ambos compañeros.
+- Comportamiento estable tras reinicios del servidor y limpiezas del pool
+  aleatorio.
+
+===============================================================================
+===============================================================================
+===============================================================================
+
+
 14 de Septiembre del 2026
 
 ===============================================================================
@@ -285,31 +634,7 @@ Ideas futuras (fáciles de implementar):
     más frases de "taberna" que de otras categorías.
 
 ===============================================================================
-10. SOLUCIÓN DE PROBLEMAS (HISTORIAL DE ERRORES REALES)
-===============================================================================
-Error C2039 'GetInstance' no es miembro de ChannelMgr
-  Causa: código de bots desactualizado.  Solución: channelMgr(bot->GetTeam()).
-
-Error C2039 'HasMember' / C2248 miembro privado
-  Causa: IsOn() es private en Channel.h.  Solución: eliminar la verificación
-  (Join() maneja el caso) o hacer IsOn() público en Channel.h.
-
-Error C2039 'JoinChannel' / 'HandleMessageChat' no existen
-  Solución: Join(bot, "") y channel->Say(bot, texto, LANG_UNIVERSAL).
-
-Error C2065 'chan': identificador no declarado
-  Causa: se pegó solo la parte interna del bloque sin el envoltorio que
-  declara Channel* chan = mgr->GetJoinChannel(...).
-  Solución: pegar el bloque COMPLETO de la Parte 5 (con throttle y mgr).
-
-Incidente humorístico-documentado: al pedir "3000-5000 frases" de golpe, la IA
-entró en bucle de repetición (miles de líneas de "cerveza/vino/licor de
-Azshara"). Lección archivada: pedir lotes grandes y variados en una sola
-petición satura el contexto; es mejor un lote curado (~664) en base de datos,
-que además es escalable sin límite desde HeidiSQL.
-
-===============================================================================
-11. RESPALDO DE LA INFORMACIÓN
+10. RESPALDO DE LA INFORMACIÓN
 ===============================================================================
 Las frases viven en la BD. Para respaldarlas:
   mysqldump -u root -p tbcmangos custom_taberna_phrases > respaldo_taberna.sql
@@ -318,7 +643,7 @@ Los cambios de C++ (Partes 1, 4, 5) conviene guardarlos también en un patch
 o en el repositorio propio del servidor (git commit recomendado).
 
 ===============================================================================
-12. NOTAS FINALES
+11. NOTAS FINALES
 ===============================================================================
 - El canal "taberna" se recrea en cada arranque (vive en RAM del core).
 - Las frases persisten en MySQL y se recargan solas cada 5 minutos.
@@ -1895,34 +2220,8 @@ Bruegal   | High King Maulgar      | 11367 aggro / 11374 slay / 11370 death
 Metodo de verificacion: consulta a la propia tabla script_texts del core
 (IDs sniffeados por CMaNGOS) + contraste con Wowhead TBC.
 
-7. PROBLEMAS TECNICOS ENCONTRADOS Y SOLUCION (LECCIONES)
+7. PRUEBAS REALIZADAS
 --------------------------------------------------------------------------------
-7.1 error C2039: "IsWithinMeleeRange" no es miembro de Creature.
-    SOLUCION: usar m_creature->IsWithinDistInMap(pTarget, 8.0f).
-7.2 error C2065: TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT / _TIMED_OR_DEAD_ /
-    _TIMED_DESPAWN no declarados.
-    CAUSA: en CMaNGOS moderno el enum paso a TempSpawnType con prefijo
-    TEMPSPAWN_ (antes TEMPSUMMON_ de ScriptDev2).
-    SOLUCION: usar TEMPSPAWN_TIMED_OOC_DESPAWN (verificado en
-    CreatureEventAI.cpp y SpellEffects.cpp del propio repo).
-7.3 MySQL 8.0.41: error 1064 por la columna rank (palabra reservada).
-    SOLUCION: escaparla con backticks: `rank`.
-7.4 error 1054: columna 'map' desconocida en creature_template.
-    CAUSA: el map vive en la tabla de spawns (creature), no en template.
-    SOLUCION: JOIN creature_template con creature, o busqueda por name.
-7.5 El comando .lookup sound NO existe en este core.
-    SOLUCION: extraer IDs de sonido de la propia tabla script_texts
-    (WHERE sound <> 0) o verificar en Wowhead TBC.
-7.6 Estilo de API obligatorio en esta rama:
-    - #include "AI/ScriptDevAI/include/sc_common.h"
-    - DoCastSpellIfCan(objetivo, spell) == CAST_OK para temporizadores.
-    - DoScriptText(ID_TEXTO, m_creature)  (orden: texto, criatura).
-    - GetAI devuelve UnitAI*; registro con Script* pNewScript = new Script;
-      pNewScript->Name / ->GetAI / ->RegisterSelf().
-
-8. PRUEBAS REALIZADAS
---------------------------------------------------------------------------------
-- Compilacion Release x64 sin errores tras correcciones 7.1 y 7.2.
 - Prueba en juego de los 6 jefes: gritos en espanol con voz, habilidades
   y temporizadores correctos. RESULTADO: OK (confirmado por el desarrollador).
 

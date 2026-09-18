@@ -303,6 +303,18 @@ ItemUsage ItemUsageValue::Calculate()
     }
 
     ItemUsage equip = QueryItemUsageForEquip(itemQualifier, bot);
+    // === PATCH D: EQUIP solo si mejora de verdad (afecta roll de necesidad) ===
+    if (equip == ItemUsage::ITEM_USAGE_EQUIP)
+    {
+        uint8 spec = AiFactory::GetPlayerSpecTab(bot);
+        if (!sRandomItemMgr.IsUpgradeAnySlot(bot, proto, spec))
+        {
+            // No es upgrade real: no equipar, no rolear necesidad
+            equip = ItemUsage::ITEM_USAGE_NONE;
+        }
+    }
+    // === FIN PATCH D ===
+    
     if (equip != ItemUsage::ITEM_USAGE_NONE)
         return equip;
 
@@ -332,6 +344,54 @@ ItemUsage ItemUsageValue::Calculate()
 
                 //Bot has budget to replace the item it wants to disenchant.
                 if (!item || !sRandomPlayerbotMgr.IsRandomBot(bot) || AI_VALUE2(uint32, "free money for", (uint32)NeedMoneyFor::tradeskill) > proto->BuyPrice)
+					
+					        //DISENCHANT
+    if ((proto->Class == ITEM_CLASS_ARMOR || proto->Class == ITEM_CLASS_WEAPON) && proto->Bonding != BIND_WHEN_PICKED_UP &&
+        ai->HasSkill(SKILL_ENCHANTING) && proto->Quality >= ITEM_QUALITY_UNCOMMON)
+    {
+        if (proto->DisenchantID)
+        {
+
+#ifndef MANGOSBOT_ZERO
+            // 2.0.x addon: Check player enchanting level against the item disenchanting requirements
+            int32 item_disenchantskilllevel = proto->RequiredDisenchantSkill;
+            if (item_disenchantskilllevel <= int32(bot->GetSkillValue(SKILL_ENCHANTING)))
+            {
+#endif
+                Item* item = CurrentItem(proto, bot);
+
+                //Bot has budget to replace the item it wants to disenchant.
+                if (!item || !sRandomPlayerbotMgr.IsRandomBot(bot) || AI_VALUE2(uint32, "free money for", (uint32)NeedMoneyFor::tradeskill) > proto->BuyPrice)
+                {
+                    // === PATCH C CORREGIDO: solo se desencanta VERDE que no sirva a la clase ===
+                    bool canDisenchant = (proto->Quality == ITEM_QUALITY_UNCOMMON);
+                    if (canDisenchant)
+                    {
+                        uint8 spec = AiFactory::GetPlayerSpecTab(bot);
+                        if (sRandomItemMgr.IsUpgradeAnySlot(bot, proto, spec))
+                            canDisenchant = false;          // es upgrade propio: se guarda
+                        if (proto->AllowableClass && !(proto->AllowableClass & bot->getClassMask()))
+                        {
+                            // no es de su clase: permitir dust (comportamiento normal)
+                        }
+                        else if (proto->Quality == ITEM_QUALITY_UNCOMMON && sRandomItemMgr.IsUpgradeAnySlot(bot, proto, spec))
+                        {
+                            canDisenchant = false;
+                        }
+                    }
+                    
+                    if (canDisenchant)
+                        return ItemUsage::ITEM_USAGE_DISENCHANT;
+                    // Si no puede desencantar, continúa evaluando otros usos (vendor, keep, etc.)
+                    // === FIN PATCH C CORREGIDO ===
+                }
+
+#ifndef MANGOSBOT_ZERO
+            }
+#endif
+        }
+    }
+				
                     return ItemUsage::ITEM_USAGE_DISENCHANT;
 
 #ifndef MANGOSBOT_ZERO

@@ -947,7 +947,9 @@ void PlayerbotAIConfig::loadFreeAltBotAccounts()
             std::string accountName = fields[0].GetString();
             uint32 accountId = fields[1].GetUInt32();
 
-            if (std::find(toggleAlwaysOnlineAccounts.begin(), toggleAlwaysOnlineAccounts.end(), accountName) != toggleAlwaysOnlineAccounts.end())
+                        std::string accountNameUp = accountName;
+            std::transform(accountNameUp.begin(), accountNameUp.end(), accountNameUp.begin(), toupper);
+            if (std::find(toggleAlwaysOnlineAccounts.begin(), toggleAlwaysOnlineAccounts.end(), accountNameUp) != toggleAlwaysOnlineAccounts.end())
                 accountToggle = true;
 
             auto result = CharacterDatabase.PQuery("SELECT name, guid FROM characters WHERE account = '%u'", accountId);
@@ -967,7 +969,11 @@ void PlayerbotAIConfig::loadFreeAltBotAccounts()
                 if (always == BotAlwaysOnline::DISABLED_BY_COMMAND)
                     continue;
 
-                if (std::find(toggleAlwaysOnlineChars.begin(), toggleAlwaysOnlineChars.end(), charName) != toggleAlwaysOnlineChars.end())
+                                std::string charNameNorm = charName;
+                std::transform(charNameNorm.begin(), charNameNorm.end(), charNameNorm.begin(), tolower);
+                if (!charNameNorm.empty())
+                    charNameNorm[0] = toupper(charNameNorm[0]);
+                if (std::find(toggleAlwaysOnlineChars.begin(), toggleAlwaysOnlineChars.end(), charNameNorm) != toggleAlwaysOnlineChars.end())
                     charToggle = true;
 
                 bool thisCharAlwaysOnline = allCharsOnline;

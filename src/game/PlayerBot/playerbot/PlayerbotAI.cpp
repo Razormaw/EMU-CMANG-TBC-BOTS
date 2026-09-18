@@ -1,3 +1,4 @@
+#include "TabernaConversationMgr.h"
 #include "PlayerbotMgr.h"
 #include "playerbot/playerbot.h"
 #include <stdarg.h>
@@ -92,7 +93,7 @@ namespace TabernaChat
         }
     }
 
-    static bool GetRandomPhrase(std::string& out)
+    bool GetRandomPhrase(std::string& out)
     {
         std::lock_guard<std::mutex> guard(s_mutex);
         LoadPhrasesLocked();
@@ -303,35 +304,33 @@ PlayerbotAI::~PlayerbotAI()
 void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
 {
 
-    // === CANAL TABERNA: auto-join y charla (throttle 30s por bot) ===
+    // === CANAL TABERNA: el manager decide Qwen o BD automáticamente ===
+{
+    static std::map<ObjectGuid, time_t> s_tabernaCheck;
+    time_t now = time(0);
+    time_t& last = s_tabernaCheck[bot->GetObjectGuid()];
+    if (now - last >= 30)
     {
-        static std::map<ObjectGuid, time_t> s_tabernaCheck;
-        time_t now = time(0);
-        time_t& last = s_tabernaCheck[bot->GetObjectGuid()];
-        if (now - last >= 30)   // solo revisa cada 30s por bot
+        last = now;
+        if (bot->IsInWorld() && bot->IsAlive() && !bot->InBattleGround())
         {
-            last = now;
-            if (bot->IsInWorld() && bot->IsAlive() && !bot->InBattleGround())
+            ChannelMgr* mgr = channelMgr(bot->GetTeam());
+            if (mgr)
             {
-                ChannelMgr* mgr = channelMgr(bot->GetTeam());
-                if (mgr)
+                Channel* chan = mgr->GetJoinChannel("taberna", 0);
+                if (chan)
                 {
-                    Channel* chan = mgr->GetJoinChannel("taberna", 0);  // <- AQUI nace "chan"
-                    if (chan)
-                    {
-                        chan->Join(bot, "");
+                    chan->Join(bot, "");
 
-                        if (urand(0, 100) < 5)   // 5% de probabilidad de hablar
-                        {
-                            std::string texto;
-                            if (TabernaChat::GetRandomPhrase(texto))
-                                chan->Say(bot, texto.c_str(), LANG_UNIVERSAL);
-                        }
+                    if (urand(0, 100) < 3)   // 5% cada 30s
+                    {
+                        sTabernaConvMgr.OnBotWantsToTalk(bot, chan);
                     }
                 }
             }
         }
     }
+}
 	
 	AiObjectContext* context = aiObjectContext;
     std::string mapString = WorldPosition(bot).isInstance() ? "I" : std::to_string(bot->GetMapId());

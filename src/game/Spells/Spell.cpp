@@ -3448,7 +3448,8 @@ SpellCastResult Spell::cast(bool skipCheck)
     if (!m_trueCaster->CheckAndIncreaseCastCounter())
     {
         if (m_triggeredByAuraSpell)
-            sLog.outError("Spell %u triggered by aura spell %u too deep in cast chain for cast. Cast not allowed for prevent overflow stack crash.", m_spellInfo->Id, m_triggeredByAuraSpell->Id);
+               // sLog.outError("Spell %u triggered by aura spell %u too deep...", ...);
+			sLog.outDebug("Spell chain blocked for %u", m_spellInfo->Id);
         else
             sLog.outError("Spell %u too deep in cast chain for cast. Cast not allowed for prevent overflow stack crash.", m_spellInfo->Id);
 

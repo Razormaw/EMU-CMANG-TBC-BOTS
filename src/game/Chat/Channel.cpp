@@ -16,6 +16,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "PlayerBot/playerbot/TabernaConversationMgr.h"
 #include "Chat/Channel.h"
 #include "Globals/ObjectMgr.h"
 #include "World/World.h"
@@ -674,6 +675,10 @@ void Channel::Say(Player* player, const char* text, uint32 lang)
         player->GetSession()->SendPacket(data);
     else
         SendMessage(data, (moderator ? ObjectGuid() : guid));
+	
+	    // === HOOK TABERNA: capturar cuando un JUGADOR REAL habla ===
+    if (player && !player->GetPlayerbotAI() && m_name == "taberna")
+        sTabernaConvMgr.OnPlayerSpeaks(player, this, text);
 }
 
 void Channel::Invite(Player* player, const char* targetName)

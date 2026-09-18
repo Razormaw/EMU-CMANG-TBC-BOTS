@@ -4,6 +4,9 @@
 #include "RandomItemMgr.h"
 #include "playerbot/PlayerbotAI.h"
 
+#include "Entities/Player.h"
+#include "Entities/Item.h"
+
 #include "Database/DBCStore.h"
 #include "Database/DatabaseEnv.h"
 #include "PlayerbotAI.h"
@@ -1495,7 +1498,17 @@ void RandomItemMgr::BuildItemInfoCache()
 
 uint32 RandomItemMgr::CalculateStatWeight(uint8 playerclass, uint8 spec, ItemPrototype const* proto, ItemSpecType& itSpec)
 {
-    uint32 specType = ITEM_SPEC_NONE;
+	
+	        // === PATCH A v2 + MODO PvP ===
+    const bool pvpMode = (spec >= 100);
+    const uint8 realSpec = pvpMode ? (uint8)(spec - 100) : spec;
+
+    uint32 resilienceTotal = 0;
+    for (uint8 i = 0; i < MAX_ITEM_PROTO_STATS; ++i)
+        if (proto->ItemStat[i].ItemStatValue > 0 && proto->ItemStat[i].ItemStatType == 35)
+            resilienceTotal += proto->ItemStat[i].ItemStatValue;
+	
+	uint32 specType = ITEM_SPEC_NONE;
     uint32 statWeight = 0;
     uint32 spellPower = 0;
     uint32 spellHeal = 0;
@@ -2165,6 +2178,13 @@ uint32 RandomItemMgr::CalculateStatWeight(uint8 playerclass, uint8 spec, ItemPro
     else
         statWeight += basicStatsWeight;
 
+	// === BONUS PvP: la resiliencia vale oro en BG ===
+    if (pvpMode && resilienceTotal)
+        statWeight += statWeight / 2 + resilienceTotal * 10;   // constante ajustable
+    // === FIN BONUS ===
+        return 0;                       // PvE: equipo PvP fuera
+    // === FIN ===
+
     return statWeight;
 }
 
@@ -2735,7 +2755,7 @@ uint32 RandomItemMgr::GetUpgrade(Player* player, std::string spec, uint8 slot, u
     uint32 closestUpgradeWeight = 0;
     std::vector<uint32> classspecs;
 
-    for (uint32 specNum = 1; specNum < 5; ++specNum)
+    for (uint32 specNum = 100; specNum < 103; ++specNum)
     {
         if (!m_weightScales[specNum].info.id)
             continue;
@@ -4027,3 +4047,52 @@ float RandomItemMgr::GetItemRarity(uint32 itemId)
 {
     return rarityCache[itemId];
 }
+
+// === PATCH UPGRADE-GUARD: implementaciones ===
+bool RandomItemMgr::IsUpgradeFor(Player* bot, ItemPrototype const* proto, uint8 slot, uint8 specId)
+{
+    if (!bot || !proto)
+        return false;
+
+    ItemSpecType newSpec;
+    uint32 newWeight = CalculateStatWeight(bot->getClass(), specId, proto, newSpec);
+    if (!newWeight)
+        return false;
+
+    if (Item* current = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
+    {
+        ItemSpecType curSpec;
+        uint32 curWeight = CalculateStatWeight(bot->getClass(), specId, current->GetProto(), curSpec);
+        if (curWeight >= newWeight)
+            return false;   // nunca cambiar hacia abajo o lateral
+    }
+    return true;
+}
+
+bool RandomItemMgr::IsUpgradeAnySlot(Player* bot, ItemPrototype const* proto, uint8 specId)
+{
+    if (!bot || !proto)
+        return false;
+
+    ItemSpecType newSpec;
+    uint32 newWeight = CalculateStatWeight(bot->getClass(), specId, proto, newSpec);
+    if (!newWeight)
+        return false;
+
+    uint32 curBest = 0;
+    for (uint8 s = EQUIPMENT_SLOT_START; s < EQUIPMENT_SLOT_END; ++s)
+    {
+        if (Item* it = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, s))
+        {
+            if (it->GetProto()->InventoryType == proto->InventoryType)
+            {
+                ItemSpecType curSpec;
+                uint32 cw = CalculateStatWeight(bot->getClass(), specId, it->GetProto(), curSpec);
+                if (cw > curBest)
+                    curBest = cw;
+            }
+        }
+    }
+    return newWeight > curBest;
+}
+// === FIN PATCH UPGRADE-GUARD ===

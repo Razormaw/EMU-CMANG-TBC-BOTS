@@ -144,6 +144,11 @@ class RandomItemMgr
         }
 
 	public:
+	
+				// === PATCH UPGRADE-GUARD (declaraciones) ===
+		bool IsUpgradeFor(Player* bot, ItemPrototype const* proto, uint8 slot, uint8 specId);
+		bool IsUpgradeAnySlot(Player* bot, ItemPrototype const* proto, uint8 specId);
+	
         void Init();
         static bool HandleConsoleCommand(ChatHandler* handler, char const* args);
         RandomItemList Query(uint32 level, RandomItemType type, RandomItemPredicate* predicate);
