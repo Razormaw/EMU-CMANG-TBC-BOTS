@@ -1,4 +1,3 @@
-
 name: Windows Build
 
 on: [push]
@@ -8,7 +7,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
   REPO_DIR : ${{github.workspace}}
   BUILD_DIR: ${{github.workspace}}/bin/builddir
@@ -34,22 +32,14 @@ jobs:
           echo "ARCHIVE_FILENAME=${{ github.event.repository.name }}-$(git rev-parse --short HEAD).zip" >> $env:GITHUB_ENV
           cmake -E make_directory ${{ env.BUILD_DIR }}
 
-      # install dependencies
       - name: Install Boost
         uses: MarkusJx/install-boost@v2.6.0
         id: install-boost
         with:
-          # REQUIRED: Specify the required boost version
-          # A list of supported versions can be found here:
-          # https://github.com/MarkusJx/prebuilt-boost/blob/main/versions-manifest.json
           boost_version: ${{env.BOOST_VERSION}}
-          # OPTIONAL: Specify a platform version
           platform_version: ${{env.BOOST_PLATFORM_VERSION}}
-          # OPTIONAL: Specify a toolset
           toolset: ${{env.BOOST_TOOLSET}}
-          # NOTE: If a boost version matching all requirements cannot be found,
-          # this build step will fail
-          
+
       - name: Configure
         env:
           BOOST_ROOT: ${{ steps.install-boost.outputs.BOOST_ROOT }}
@@ -70,33 +60,3 @@ jobs:
         with:
           name: snapshot
           path: "${{env.BUILD_DIR}}/bin/${{env.ARCHIVE_FILENAME}}"
-
-  notify:
-    name: Send Notification to Discord on Failure
-    runs-on: ubuntu-latest
-    permissions:
-      contents: none
-    needs: # make sure the notification is sent AFTER the jobs you want included have completed
-      - build
-    if: failure()
-
-    steps:
-      - name: Setup Environmental Variables
-        run: |
-          echo "GIT_BRANCH=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
-          echo "GIT_SHORT_SHA=`echo ${GITHUB_SHA} | cut -c1-8`" >> $GITHUB_ENV
-
-      - name: Notify
-        uses: rjstone/discord-webhook-notify@v2.3.0
-        with:
-          severity: error
-          description: |
-            **Windows Build Failed**
-          details: |
-            - **Branch:** ${{env.GIT_BRANCH}}
-            - **Pusher:** ${{github.event.pusher.name}}
-            - **Author:** ${{github.event.head_commit.author.name}}
-            - **Commit:** [${{github.repository}}/${{env.GIT_SHORT_SHA}}](${{github.server_url}}/${{ github.repository }}/commit/${{github.sha}})
-            - **Build Log:** [actions/runs/${{github.run_id}}](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}})
-          footer: CMaNGOS Developers Notified!
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
