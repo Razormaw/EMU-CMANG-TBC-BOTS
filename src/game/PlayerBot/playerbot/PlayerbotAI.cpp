@@ -321,10 +321,13 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
                 if (chan)
                 {
                     chan->Join(bot, "");
+                            sTabernaConvMgr.RegisterBot(chan, bot);
+                            sTabernaConvMgr.RegisterGuildBot(bot);        // NUEVO
 
-                    if (urand(0, 100) < 3)   // 5% cada 30s
+                            if (urand(0, 100) < 3)   // 5% cada 30s
                     {
-                        sTabernaConvMgr.OnBotWantsToTalk(bot, chan);
+                        sTabernaConvMgr.RegisterGuildBot(bot);   // registra al bot en su gremio
+						sTabernaConvMgr.OnBotWantsToTalk(bot, chan);
                     }
                 }
             }
@@ -1333,6 +1336,7 @@ void PlayerbotAI::OnResurrected()
 
 void PlayerbotAI::HandleCommands()
 {
+
     ExternalEventHelper helper(aiObjectContext);
     std::list<ChatCommandHolder> delayed;
     while (!chatCommands.empty())
@@ -1368,6 +1372,38 @@ void PlayerbotAI::UpdateAIInternal(uint32 elapsed, bool minimal)
 {
     if (bot->IsBeingTeleported() || !bot->IsInWorld())
         return;
+	
+	if (!minimal)
+        CheckPvPGearSwap(elapsed);
+	
+	    // === AUTO-EQUIP: mejoras ganadas por loot que estén en bolsas ===
+    uint8 specBag = sRandomItemMgr.GetPlayerSpecId(bot);
+    if (specBag && !bot->IsInCombat())
+    {
+        bool swapped = false;
+        for (uint8 bag = INVENTORY_SLOT_BAG_START; !swapped && bag < INVENTORY_SLOT_BAG_END; ++bag)
+        {
+            for (uint8 i = INVENTORY_SLOT_ITEM_START; !swapped && i < INVENTORY_SLOT_ITEM_END; ++i)
+            {
+                Item* item = bot->GetItemByPos(bag, i);
+                if (!item)
+                    continue;
+                ItemPrototype const* proto = item->GetProto();
+                if (!proto)
+                    continue;
+                if (proto->Class != ITEM_CLASS_WEAPON && proto->Class != ITEM_CLASS_ARMOR)
+                    continue;
+                uint8 slot = sRandomItemMgr.GetSlotForItem(proto);
+                if (slot >= EQUIPMENT_SLOT_END)
+                    continue;
+                if (!sRandomItemMgr.IsUpgradeFor(bot, proto, slot, specBag))
+                    continue;
+                bot->SwapItem(bag, i);   // el core hace el cambio seguro (viejo a bolsa, nuevo equipado)
+                sLog.outDetail("Bot %s auto-equipped %s from bags", bot->GetName(), proto->Name1);
+                swapped = true;
+            }
+        }
+    }
 
     std::string mapString = WorldPosition(bot).isInstance() ? "I" : std::to_string(bot->GetMapId());
     auto pmo = sPerformanceMonitor.start(PERF_MON_TOTAL, "PlayerbotAI::UpdateAIInternal " + mapString, nullptr, bot->GetMapId(), bot->GetInstanceId());
@@ -8944,4 +8980,74 @@ bool PlayerbotAI::HandleSpellClick(ObjectGuid guid)
     }
 #endif
     return false;
+	
+}
+
+bool PlayerbotAI::IsInPvPContext()
+{
+    if (bot->InBattleGround() || bot->InArena())
+        return true;
+    uint32 zone = bot->GetZoneId();
+    if (bot->GetTeam() == ALLIANCE)
+        return zone == 1637 || zone == 1638 || zone == 1497 || zone == 3430;
+    else
+        return zone == 1519 || zone == 1537 || zone == 1657 || zone == 3557;
+}
+
+void PlayerbotAI::CheckPvPGearSwap(uint32 elapsed)
+{
+    m_pvpGearCheckTimer += elapsed;
+    if (m_pvpGearCheckTimer < 5000)
+        return;
+    m_pvpGearCheckTimer = 0;
+    if (!bot->IsAlive() || bot->IsInCombat())
+        return;
+    bool wantPvP = IsInPvPContext();
+    if (wantPvP == m_pvpGearSet)
+        return;
+    m_pvpGearSet = wantPvP;
+    PlayerbotFactory factory(bot, bot->GetLevel());
+    factory.EquipPvPSet(wantPvP);
+	
+}
+
+
+void PlayerbotAI::HandleItemPushResult(const WorldPacket& packet)
+{
+    ObjectGuid sourceGuid;
+    uint32 sourceSlot;
+    uint32 itemId;
+    uint32 itemSuffixFactor;
+    uint32 itemRandomPropertyId;
+    uint32 count;
+    uint32 stackSize;
+    uint8 destBag;
+    uint8 destSlot;
+
+    WorldPacket p(packet);
+    p >> sourceGuid >> sourceSlot >> itemId >> itemSuffixFactor >> itemRandomPropertyId >> count >> stackSize >> destBag >> destSlot;
+
+    ItemPrototype const* proto = sObjectMgr.GetItemPrototype(itemId);
+    if (!proto)
+        return;
+
+    if (proto->Class != ITEM_CLASS_WEAPON && proto->Class != ITEM_CLASS_ARMOR)
+        return;
+
+    uint8 specId = sRandomItemMgr.GetPlayerSpecId(bot);
+    if (specId == 0)
+        return;
+
+    uint8 equipSlot = sRandomItemMgr.GetSlotForItem(proto);
+    if (equipSlot >= EQUIPMENT_SLOT_END)
+        return;
+
+    if (sRandomItemMgr.IsUpgradeFor(bot, proto, equipSlot, specId))
+    {
+        Item* item = bot->GetItemByPos(destBag, destSlot);
+        if (item)
+        {
+            bot->EquipItem(equipSlot, item, true);
+        }
+    }
 }

@@ -3,6 +3,7 @@
 #include "PartyMemberToHeal.h"
 #include "playerbot/PlayerbotAIConfig.h"
 #include "playerbot/ServerFacade.h"
+#include "playerbot/LootObjectStack.h"
 
 using namespace ai;
 
@@ -52,7 +53,13 @@ Unit* PartyMemberToHeal::Calculate()
             target->GetHealthPercent() < 100 && 
             Check(target))
         {
-            needHeals.push_back(target);
+            LootObject loot = AI_VALUE(LootObject, "loot target");
+
+            if (!loot.IsLootPossible(bot))
+            {
+
+                needHeals.push_back(target);
+            }
         }
     }
 

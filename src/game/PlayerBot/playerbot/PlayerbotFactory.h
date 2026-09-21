@@ -59,6 +59,7 @@ public:
     void UpgradeGear(bool syncWithMaster) { InitEquipment(!syncWithMaster, syncWithMaster); InitGems(); EnchantEquipment(); }
     void EquipGearBest() { return InitEquipment(false, false, false); }
     void EquipGearPartialUpgrade() { return InitEquipment(false, false, true, true); }
+	void EquipPvPSet(bool pvp);
     void AddReagents() { return InitReagents(); }
     void AddPotions() { return InitPotions(); }
     void AddConsumes() { return AddConsumables(); }

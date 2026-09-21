@@ -20,16 +20,9 @@
 #include "CreatureEventAI.h"
 #include "CreatureEventAIMgr.h"
 #include "Globals/ObjectMgr.h"
-#include "World/World.h"
-#include "Grids/Cell.h"
-#include "Grids/CellImpl.h"
-#include "Grids/GridNotifiers.h"
-#include "Grids/GridNotifiersImpl.h"
 #include "Maps/InstanceData.h"
 #include "Chat/Chat.h"
 #include "Tools/Language.h"
-#include "Entities/TemporarySpawn.h"
-#include "Spells/Spell.h"
 #include "MotionGenerators/MovementGenerator.h"
 
 bool CreatureEventAIHolder::UpdateRepeatTimer(Creature* creature, uint32 repeatMin, uint32 repeatMax)
@@ -82,6 +75,9 @@ void CreatureEventAI::GetAIInformation(ChatHandler& reader)
         else
             reader.PSendSysMessage("%u Type%3u (%s) Timer(%3us) action[type(param1)]:  %2u(%5u)", itr->event.event_id, uint32(itr->event.event_type), itr->enabled ? "On" : "Off", itr->timer / 1000, itr->event.action[0].type, itr->event.action[0].raw.param1);
     }
+
+    if (m_setId != -1)
+        reader.PSendSysMessage("Action set engaged %d. Index %u. MaxIndex %u. Timer %u. Repeat %s", m_setId, m_index, m_maxIndex, m_timer, m_repeat ? "true" : "false");
 }
 
 // For Non Dungeon map only allow non-difficulty flags or EFLAG_NORMAL mode
@@ -101,7 +97,8 @@ CreatureEventAI::CreatureEventAI(Creature* creature) : CreatureAI(creature),
     m_throwAIEventMask(0),
     m_throwAIEventStep(0),
     m_LastSpellMaxRange(0),
-    m_despawnAggregationMask(0)
+    m_despawnAggregationMask(0),
+    m_timer(0), m_setId(-1), m_maxIndex(0), m_index(0), m_repeat(false)
 {
 
 }
@@ -584,6 +581,12 @@ bool CreatureEventAI::CheckEvent(CreatureEventAIHolder& holder, Unit* actionInvo
             if (!m_creature->GetVictim() || !IsCombatMovement() || m_creature->GetMotionMaster()->GetCurrent()->IsReachable())
                 return false;
             break;
+        case EVENT_T_ACTION_SET:
+            if (event.actionSet.setId != m_setId || event.actionSet.stepIndex != m_index || event.actionSet.timeMs > m_timer)
+                return false;
+            break;
+        case EVENT_T_MOVEMENT_INFORM:
+            break;
         default:
             sLog.outErrorEventAI("Creature %u using Event %u has invalid Event Type(%u), missing from ProcessEvent() Switch.", m_creature->GetEntry(), holder.event.event_id, holder.event.event_type);
             return false;
@@ -622,13 +625,15 @@ void CreatureEventAI::ResetEvent(CreatureEventAIHolder& holder)
         holder.enabled = false;
 }
 
-void CreatureEventAI::CheckAndReadyEventForExecution(CreatureEventAIHolder& holder, Unit* actionInvoker, Unit* AIEventSender)
+bool CreatureEventAI::CheckAndReadyEventForExecution(CreatureEventAIHolder& holder, Unit* actionInvoker, Unit* AIEventSender)
 {
     if (CheckEvent(holder, actionInvoker, AIEventSender))
     {
         holder.inProgress = true;
         m_creatureEventAITempList[m_depth].push_back(holder);
+        return true;
     }
+    return false;
 }
 
 bool CreatureEventAI::ProcessEvent(CreatureEventAIHolder& holder, Unit* actionInvoker, Unit* AIEventSender /*=nullptr*/)
@@ -941,106 +946,28 @@ bool CreatureEventAI::ProcessAction(CreatureEventAI_Action const& action, uint32
         case ACTION_T_COMBAT_MOVEMENT:
         {
             bool hasCombatMovement = !m_creature->hasUnitState(UNIT_STAT_NO_COMBAT_MOVEMENT);
-
-            // ignore no affect case
-            if (hasCombatMovement == (action.combat_movement.state != 0) || m_creature->IsNonMeleeSpellCasted(false))
-                return false;
-
-            SetCombatMovement(action.combat_movement.state != 0, true);
-
-            if (hasCombatMovement && action.combat_movement.melee && m_creature->IsInCombat() && m_creature->GetVictim())
-                m_creature->SendMeleeAttackStart(*m_creature->GetVictim());
-            else if (action.combat_movement.melee && m_creature->IsInCombat() && m_creature->GetVictim())
-                m_creature->SendMeleeAttackStop(*m_creature->GetVictim());
+            if (hasCombatMovement != (action.combat_movement.state != 0))
+            {
+                if (action.combat_movement.state != 0)
+                    m_creature->clearUnitState(UNIT_STAT_NO_COMBAT_MOVEMENT);
+                else
+                    m_creature->addUnitState(UNIT_STAT_NO_COMBAT_MOVEMENT);
+            }
             break;
         }
-        case ACTION_T_SET_PHASE:
-            m_Phase = action.set_phase.phase;
-            DEBUG_FILTER_LOG(LOG_FILTER_EVENT_AI_DEV, "%s: ACTION_T_SET_PHASE - script %u for %s, phase is now %u", GetAIName().data(), eventId, m_creature->GetGuidStr().c_str(), m_Phase);
-            break;
-        case ACTION_T_INC_PHASE:
+        case ACTION_T_SET_UNIT_MOVEMENT:
         {
-            int32 new_phase = int32(m_Phase) + action.set_inc_phase.step;
-            if (new_phase < 0)
-            {
-                sLog.outErrorEventAI("Event %d decrease Phase under 0. CreatureEntry = %d", eventId, m_creature->GetEntry());
-                m_Phase = 0;
-            }
-            else if (new_phase >= MAX_PHASE)
-            {
-                sLog.outErrorEventAI("Event %d incremented Phase above %u. Phase mask cannot be used with phases past %u. CreatureEntry = %d", eventId, MAX_PHASE - 1, MAX_PHASE - 1, m_creature->GetEntry());
-                m_Phase = MAX_PHASE - 1;
-            }
+            if (action.set_unit_movement.type == MOVEMENT_TYPE_NONE)
+                m_creature->GetMotionMaster()->Clear(false, true);
             else
-                m_Phase = new_phase;
-
-            DEBUG_FILTER_LOG(LOG_FILTER_EVENT_AI_DEV, "%s: ACTION_T_INC_PHASE - script %u for %s, phase is now %u", GetAIName().data(), eventId, m_creature->GetGuidStr().c_str(), m_Phase);
+                m_creature->GetMotionMaster()->MoveIdle();
             break;
         }
-        case ACTION_T_EVADE:
-            if (action.evade.combatOnly)
-                m_creature->CombatStopWithPets(true);
-            else
-                EnterEvadeMode();
-            break;
-        case ACTION_T_FLEE_FOR_ASSIST:
-            if (!DoFlee())
-                return false;
-            break;
-        case ACTION_T_QUEST_EVENT_ALL:
-            if (action.quest_event_all.useThreatList)
-            {
-                ThreatList const& threatList = m_creature->getThreatManager().getThreatList();
-                for (auto i : threatList)
-                    if (Player* temp = m_creature->GetMap()->GetPlayer(i->getUnitGuid()))
-                        temp->RewardPlayerAndGroupAtEventExplored(action.quest_event_all.questId, m_creature);
-            }
-            else if (actionInvoker && actionInvoker->GetTypeId() == TYPEID_PLAYER)
-                ((Player*)actionInvoker)->RewardPlayerAndGroupAtEventExplored(action.quest_event_all.questId, m_creature);
-            break;
-        case ACTION_T_CAST_EVENT_ALL:
-        {
-            ThreatList const& threatList = m_creature->getThreatManager().getThreatList();
-            for (auto i : threatList)
-                if (Player* temp = m_creature->GetMap()->GetPlayer(i->getUnitGuid()))
-                    temp->CastedCreatureOrGO(action.cast_event_all.creatureId, m_creature->GetObjectGuid(), action.cast_event_all.spellId);
-            break;
-        }
-        case ACTION_T_REMOVEAURASFROMSPELL:
-            if (Unit* target = GetTargetByType(action.remove_aura.target, actionInvoker, AIEventSender, eventTarget, failedTargetSelection))
-                target->RemoveAurasDueToSpell(action.remove_aura.spellId);
-            else if (failedTargetSelection)
-                sLog.outErrorEventAI("Event %u - nullptr target for ACTION_T_REMOVEAURASFROMSPELL(%u), target-type %u", eventId, action.type, action.remove_aura.target);
-            break;
-        case ACTION_T_RANGED_MOVEMENT:
-            m_attackDistance = (float)action.ranged_movement.distance;
-            m_attackAngle = action.ranged_movement.angle / 180.0f * M_PI_F;
-
-            if (!m_creature->hasUnitState(UNIT_STAT_NO_COMBAT_MOVEMENT | UNIT_STAT_CAN_NOT_REACT))
-            {
-                if (m_creature->GetMotionMaster()->GetCurrentMovementGeneratorType() == CHASE_MOTION_TYPE)
-                {
-                    // Drop current movement gen
-                    m_creature->GetMotionMaster()->Clear(false);
-                    m_creature->GetMotionMaster()->MoveChase(m_creature->GetVictim(), m_attackDistance, m_attackAngle);
-                }
-            }
-            break;
-        case ACTION_T_RANDOM_PHASE:
-            m_Phase = GetRandActionParam(rnd, action.random_phase.phase1, action.random_phase.phase2, action.random_phase.phase3);
-            DEBUG_FILTER_LOG(LOG_FILTER_EVENT_AI_DEV, "%s: ACTION_T_RANDOM_PHASE - script %u for %s, phase is now %u", GetAIName().data(), eventId, m_creature->GetGuidStr().c_str(), m_Phase);
-            break;
-        case ACTION_T_RANDOM_PHASE_RANGE:
-            if (action.random_phase_range.phaseMax > action.random_phase_range.phaseMin)
-                m_Phase = rnd % (action.random_phase_range.phaseMax - action.random_phase_range.phaseMin + 1) + action.random_phase_range.phaseMin;
-            else
-                sLog.outErrorEventAI("ACTION_T_RANDOM_PHASE_RANGE cannot have Param2 <= Param1. Divide by Zero. Event = %d. CreatureEntry = %d", eventId, m_creature->GetEntry());
-            break;
         case ACTION_T_SUMMON_ID:
         {
             Unit* target = GetTargetByType(action.summon_id.target, actionInvoker, AIEventSender, eventTarget, failedTargetSelection);
             if (!target && failedTargetSelection)
-                sLog.outErrorEventAI("Event %u - nullptr target for ACTION_T_SUMMON_ID(%u), target-type %u", eventId, action.type, action.summon_id.target);
+                sLog.outErrorEventAI("Event %u - nullptr target for ACTION_T_SUMMON_ID (%u), target-type %u", eventId, action.type, action.summon_id.target);
 
             CreatureEventAI_Summon_Map::const_iterator i = sEventAIMgr.GetCreatureEventAISummonMap().find(action.summon_id.spawnId);
             if (i == sEventAIMgr.GetCreatureEventAISummonMap().end())
@@ -1348,10 +1275,10 @@ bool CreatureEventAI::ProcessAction(CreatureEventAI_Action const& action, uint32
         {
             if (action.setFacing.reset)
             {
-                float x, y, z, o;
-                if (m_creature->GetMotionMaster()->empty() || !m_creature->GetMotionMaster()->top()->GetResetPosition(*m_creature, x, y, z, o))
-                    m_creature->GetRespawnCoord(x, y, z, &o);
-                m_creature->SetFacingTo(o);
+                Position pos;
+                if (m_creature->GetMotionMaster()->empty() || !m_creature->GetMotionMaster()->top()->GetResetPosition(*m_creature, pos))
+                    m_creature->GetRespawnCoord(pos.x, pos.y, pos.z, &pos.o);
+                m_creature->SetFacingTo(pos.o);
             }
             else
             {
@@ -1363,6 +1290,9 @@ bool CreatureEventAI::ProcessAction(CreatureEventAI_Action const& action, uint32
                     return false;
                 }
                 m_creature->SetFacingToObject(target);
+                
+                if (!m_creature->IsInCombat() && !m_creature->GetMotionMaster()->empty()) // update reset position when during action set
+                    m_creature->GetMotionMaster()->top()->SetResetPosition(*m_creature, m_creature->GetPosition());
             }
             break;
         }
@@ -1406,6 +1336,22 @@ bool CreatureEventAI::ProcessAction(CreatureEventAI_Action const& action, uint32
             break;
         case ACTION_T_RETREAT:
             DoRetreat();
+            break;
+        case ACTION_T_START_ACTION_SET:
+            m_setId = action.startActionSet.setId;
+            m_index = action.startActionSet.stepIndex;
+            m_timer = 0;
+            m_repeat = action.startActionSet.repeatAndOocFlags & 0x1;
+            m_setOocOnly = action.startActionSet.repeatAndOocFlags & 0x2;
+            m_maxIndex = 0;
+            for (auto& i : m_CreatureEventAIList)
+            {
+                CreatureEventAI_Event const& event = i.event;
+                if (event.event_type == EVENT_T_ACTION_SET)
+                    if (m_maxIndex < event.actionSet.stepIndex)
+                        m_maxIndex = event.actionSet.stepIndex;
+            }
+
             break;
         default:
             sLog.outError("%s::ProcessAction(): action(%u) not implemented", GetAIName().data(), static_cast<uint32>(action.type));
@@ -1968,6 +1914,10 @@ void CreatureEventAI::UpdateEventTimers(const uint32 diff)
     if (m_EventUpdateTime < diff)
     {
         m_EventDiff += diff;
+        if (m_setId != -1 && (!m_setOocOnly || !m_creature->IsInCombat()))
+            m_timer += m_EventDiff;
+
+        uint32 maxTimer = 0;
 
         // Check for time based events
         IncreaseDepthIfNecessary();
@@ -1976,6 +1926,14 @@ void CreatureEventAI::UpdateEventTimers(const uint32 diff)
             if (i->event.event_type == EVENT_T_TARGET_NOT_REACHABLE)
             {
                 CheckAndReadyEventForExecution(*i);
+                continue;
+            }
+
+            if (i->event.event_type == EVENT_T_ACTION_SET)
+            {
+                bool success = CheckAndReadyEventForExecution(*i);
+                if (m_setId == i->event.actionSet.setId && m_index == i->event.actionSet.stepIndex && maxTimer < i->event.actionSet.timeMs)
+                    maxTimer = i->event.actionSet.timeMs;
                 continue;
             }
 
@@ -2001,6 +1959,26 @@ void CreatureEventAI::UpdateEventTimers(const uint32 diff)
         }
         ProcessEvents();
 
+        if (m_setId != -1)
+        {
+            if (m_timer >= maxTimer)
+            {
+                m_timer = 0;
+                if (m_maxIndex == m_index)
+                {
+                    m_index = 0;
+                    if (!m_repeat)
+                    {
+                        m_maxIndex = 0;
+                        m_setId = -1;
+                        m_repeat = false;
+                    }
+                }
+                else
+                    ++m_index;
+            }
+        }
+
         m_EventDiff = 0;
         m_EventUpdateTime = EVENT_UPDATE_TIME;
     }
@@ -2010,3 +1988,22 @@ void CreatureEventAI::UpdateEventTimers(const uint32 diff)
         m_EventUpdateTime -= diff;
     }
 }
+
+void CreatureEventAI::MovementInform(uint32 motionType, uint32 pointId)
+{
+    IncreaseDepthIfNecessary();
+    for (auto& itr : m_CreatureEventAIList)
+    {
+        if (itr.event.event_type == EVENT_T_MOVEMENT_INFORM &&
+            itr.event.movementInform.movementType == motionType && itr.event.movementInform.pointId == pointId)
+        {
+            if (motionType == WAYPOINT_MOTION_TYPE || motionType == PATH_MOTION_TYPE || motionType == LINEAR_WP_MOTION_TYPE)
+                if (itr.event.movementInform.pathId != m_creature->GetMotionMaster()->GetPathId())
+                    continue;
+
+            CheckAndReadyEventForExecution(itr);
+        }
+    }
+    ProcessEvents();
+}
+

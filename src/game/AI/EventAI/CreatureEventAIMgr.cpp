@@ -92,7 +92,7 @@ void CreatureEventAIMgr::CheckUnusedAISummons()
     for (auto itr = m_CreatureEventAI_Summon_Map.begin(); itr != m_CreatureEventAI_Summon_Map.end(); ++itr)
         idx_set.insert(itr->first);
 
-    auto process = [&](CreatureEventAI_Event_Map const& map)
+    auto process = [&](const CreatureEventAI_Event_Map& map)
     {
         for (auto itr = map.begin(); itr != map.end(); ++itr)
         {
@@ -557,6 +557,15 @@ void CreatureEventAIMgr::LoadCreatureEventAI_Scripts()
                     }
                     break;
                 }
+                case EVENT_T_ACTION_SET:
+                    break;
+                case EVENT_T_MOVEMENT_INFORM:
+                    if (temp.movementInform.movementType > MAX_DB_MOTION_TYPE)
+                    {
+                        sLog.outErrorEventAI("Creature %d has nonexistent MovementType(%u) defined in event %u.", keyField, temp.movementInform.movementType, eventId);
+                        continue;
+                    }
+                    break;
                 default:
                     sLog.outErrorEventAI("Creature %d using not checked at load event (%u) in event %u. Need check code update?", keyField, temp.event_id, eventId);
                     break;
@@ -673,17 +682,6 @@ void CreatureEventAIMgr::LoadCreatureEventAI_Scripts()
                         SpellEntry const* spellInfo = sSpellTemplate.LookupEntry<SpellEntry>(action.cast.spellId);
                         if (!spellInfo)
                             sLog.outErrorEventAI("Event %u Action %u uses nonexistent SpellID %u.", eventId, j + 1, action.cast.spellId);
-                        /* FIXME: temp.raw.param3 not have event tipes with recovery time in it....
-                        else
-                        {
-                            if (spell->RecoveryTime > 0 && temp.event_flags & EFLAG_REPEATABLE)
-                            {
-                                // output as debug for now, also because there's no general rule all spells have RecoveryTime
-                                if (temp.event_param3 < spell->RecoveryTime)
-                                    DEBUG_FILTER_LOG(LOG_FILTER_AI_AND_MOVEGENSS, "CreatureEventAI:  Event %u Action %u uses SpellID %u but cooldown is longer(%u) than minumum defined in event param3(%u).", i, j+1,action.cast.spellId, spell->RecoveryTime, temp.event_param3);
-                            }
-                        }
-                        */
 
                         // Cast is always triggered if target is forced to cast on self
                         if (action.cast.castFlags & CAST_FORCE_TARGET_SELF)
@@ -714,8 +712,6 @@ void CreatureEventAIMgr::LoadCreatureEventAI_Scripts()
                             // spell must be cast on self, but is not
                             if ((IsOnlySelfTargeting(spellInfo) || spellInfo->rangeIndex == SPELL_RANGE_IDX_SELF_ONLY) && action.cast.target != TARGET_T_SELF && !(action.cast.castFlags & CAST_FORCE_TARGET_SELF))
                                 sLog.outErrorEventAI("Event %u Action %u uses SpellID %u that must be self cast (target is %u)", eventId, j + 1, action.cast.spellId, action.cast.target);
-
-                            // TODO: spell must be cast on enemy, but is not
 
                             // used TARGET_T_ACTION_INVOKER, but likely should be _INVOKER_OWNER instead
                             if (action.cast.target == TARGET_T_ACTION_INVOKER &&
@@ -818,7 +814,7 @@ void CreatureEventAIMgr::LoadCreatureEventAI_Scripts()
                     case ACTION_T_RANDOM_PHASE_RANGE:       // PhaseMin, PhaseMax
                         if (action.random_phase_range.phaseMin >= MAX_PHASE)
                             sLog.outErrorEventAI("Event %u Action %u attempts to set phaseMin >= %u. Phase mask cannot be used past phase %u.", eventId, j + 1, MAX_PHASE, MAX_PHASE - 1);
-                        if (action.random_phase_range.phaseMin >= MAX_PHASE)
+                        if (action.random_phase_range.phaseMax >= MAX_PHASE)
                             sLog.outErrorEventAI("Event %u Action %u attempts to set phaseMax >= %u. Phase mask cannot be used past phase %u.", eventId, j + 1, MAX_PHASE, MAX_PHASE - 1);
                         if (action.random_phase_range.phaseMin >= action.random_phase_range.phaseMax)
                         {
@@ -874,7 +870,7 @@ void CreatureEventAIMgr::LoadCreatureEventAI_Scripts()
                             if (action.mount.creatureId && !sCreatureStorage.LookupEntry<CreatureInfo>(action.mount.creatureId))
                             {
                                 sLog.outErrorEventAI("Event %u Action %u uses nonexistent Creature entry %u.", eventId, j + 1, action.mount.creatureId);
-                                action.morph.creatureId = 0;
+                                action.mount.creatureId = 0;
                             }
 
                             if (action.mount.modelId)
@@ -1068,6 +1064,8 @@ void CreatureEventAIMgr::LoadCreatureEventAI_Scripts()
                         break;
                     case ACTION_T_RETREAT:
                         break;
+                    case ACTION_T_START_ACTION_SET:
+                        break;
                     default:
                         sLog.outErrorEventAI("Event %u Action %u have currently not checked at load action type (%u). Need check code update?", eventId, j + 1, temp.action[j].type);
                         break;
@@ -1076,9 +1074,9 @@ void CreatureEventAIMgr::LoadCreatureEventAI_Scripts()
 
             // Add to list
             if (temp.creature_id)
-                newEntryContainer->operator[](temp.creature_id).push_back(temp);
+                newEntryContainer->push_back(temp);
             else
-                newGuidContainer->operator[](temp.creature_guid).push_back(temp);
+                newGuidContainer->push_back(temp);
             ++Count;
 
             switch (temp.event_type)

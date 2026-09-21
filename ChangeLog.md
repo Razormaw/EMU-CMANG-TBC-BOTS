@@ -1,7 +1,462 @@
-17 de Septiembre del 2026
+19 de Septiembre del 2026
+
+================================================================================
+DOCUMENTACION DE ARREGLOS Y SCRIPTS - MAZMORRA: MINAS DE LA MUERTE (DEADMINE)
+================================================================================
+Proyecto      : CMaNGOS TBC (rama oficial mangos-tbc, actualizada)
+Mazmorra      : Deadmines / Minas de la Muerte
+Map ID        : 36
+Fecha         : Septiembre 2026
+Estado        : Integrado y compilado (Release x64). Verificacion de entries y
+                pruebas en juego pendientes de reporte del desarrollador.
+================================================================================
+
+1. OBJETIVO
+--------------------------------------------------------------------------------
+Completar las Minas de la Muerte: scriptear los 6 jefes que faltaban (solo
+existia Mr. Smite), con textos en ESPANOL LATINO y voces asignadas.
+
+2. ESTADO PREVIO DEL CORE
+--------------------------------------------------------------------------------
+- boss_mr_smite.cpp    : Mr. Smite (646) con fases y cambio de equipo.
+- deadmines.cpp / .h   : zona y enums compartidos.
+- instance_deadmines.cpp : datos de instancia.
+- Textos oficiales de Mr. Smite: -1036000 a -1036003 (sonidos 5775-5779).
+
+3. ARCHIVOS CREADOS (6)
+--------------------------------------------------------------------------------
+Ruta: src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/deadmines/
+  boss_rahhkzor.cpp / boss_sneeds_shredder.cpp / boss_sneed.cpp
+  boss_gilnid.cpp / boss_captain_greenskin.cpp / boss_edwin_vanclef.cpp
+
+4. ARCHIVOS MODIFICADOS
+--------------------------------------------------------------------------------
+- ScriptLoader.cpp: 6 externs + 6 llamadas en el bloque de deadmines.
+- Re-ejecucion de CMake (cmake -S . -B build) por los .cpp nuevos.
+
+5. JEFES, ENTRIES Y MECANICAS
+--------------------------------------------------------------------------------
+Rhahk'Zor (644)        : Cleave 11609 + Knock Away 10101.
+Sneed's Shredder (642) : Cleave 11609 + Enrage 8599 al 30% (maquina, emotes).
+Sneed (643)            : Cleave 11609 + Hamstring 1715 (emotes).
+Gilnid (1763)          : Stomp 5589 + Enrage 8599 al 30% (gnomo leproso).
+Capitan Greenskin (647): Rend 11572 + Hamstring 1715.
+Edwin VanCleef (639)   : Rend 11572 + Hamstring 1715 + Enrage 8599 al 25%.
+
+6. SQL APLICADO
+--------------------------------------------------------------------------------
+- ScriptNames: 644, 642, 643, 1763, 647, 639 (boss_rahhkzor,
+  boss_sneeds_shredder, boss_sneed, boss_gilnid, boss_captain_greenskin,
+  boss_edwin_vanclef).
+- Textos nuevos en espanol latino: -1036004 a -1036020 (convencion map 036).
+
+7. VOCES ASIGNADAS (SoundEntries verificados en la propia DB del core)
+--------------------------------------------------------------------------------
+Rhahk'Zor  : Maulgar (ogro)      11367 / 11373 / 11369
+Gilnid     : Thermaplugg (gnomo) 5807 / 5810 / 5809
+Greenskin  : Kargath (orco)      10325 / 10327 / 10328
+VanCleef   : Medivh (humano)     10436 / 10440 / 10441 (enrage 10436)
+Shredder y Sneed: sin voz (emotes type 3; kit de sonido del modelo).
+
+8. LECCIONES TECNICAS
+--------------------------------------------------------------------------------
+- Patron de casteo: DoCastSpellIfCan(...) == CAST_OK.
+- Maquinas y constructos sin voz: emotes type 3 (CHAT_TYPE_BOSS_EMOTE).
+- Entries asumidos por memoria clasica; queda pendiente la verificacion por
+  consulta JOIN creature/creature_template (map 36) y el reporte de pruebas.
+
+9. PRUEBAS
+--------------------------------------------------------------------------------
+Pendientes: aggro/voces de cada jefe, Enrage de Shredder/Gilnid/VanCleef,
+aparicion de Sneed tras destruir su trituradora.
+
+================================================================================
+FIN DEL DOCUMENTO - MINAS DE LA MUERTE (MAP 36)
+================================================================================
+
+================================================================================
+DOCUMENTACION DE ARREGLOS Y SCRIPTS - MAZMORRA: CASTILLO DE COLMILLO OSCURO
+================================================================================
+Proyecto      : CMaNGOS TBC (rama oficial mangos-tbc, actualizada)
+Mazmorra      : Shadowfang Keep / Castillo de Colmillo Oscuro
+Map ID        : 33
+Fecha         : Septiembre 2026
+Estado        : Integrado, compilado y ScriptNames VERIFICADOS 10/10 por
+                consulta del desarrollador. Pruebas en juego pendientes.
+================================================================================
+
+1. OBJETIVO
+--------------------------------------------------------------------------------
+Scriptear los 7 jefes de ala y 3 opcionales/rare de la mazmorra (el core solo
+tenia instancia y zona), con textos en ESPANOL LATINO y voces asignadas.
+
+2. ESTADO PREVIO DEL CORE
+--------------------------------------------------------------------------------
+- instance_shadowfang_keep.cpp / shadowfang_keep.cpp / .h (sin jefes).
+- Textos y voces OFICIALES de Arugal ya presentes en script_texts:
+  -1033013 (Fenrus), -1033017 (aggro), -1033018 (slay), -1033019 (maldicion),
+  con sonidos 5791/5793/5795/5797. El nuevo script de Arugal los REUTILIZA.
+
+3. ARCHIVOS CREADOS (10)
+--------------------------------------------------------------------------------
+Ruta: src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/shadowfang_keep/
+  boss_razorclaw_the_butcher.cpp / boss_baron_silverlaine.cpp
+  boss_commander_springvale.cpp / boss_odo_the_blindwatcher.cpp
+  boss_fenrus_the_devourer.cpp / boss_wolf_master_nandos.cpp
+  boss_archmage_arugal.cpp / boss_rethilgore.cpp
+  boss_deathsworn_captain.cpp / boss_sever.cpp
+
+4. ARCHIVOS MODIFICADOS
+--------------------------------------------------------------------------------
+- ScriptLoader.cpp: 10 externs + 10 llamadas en el bloque de shadowfang_keep.
+- Re-ejecucion de CMake por los .cpp nuevos.
+
+5. JEFES, ENTRIES Y MECANICAS
+--------------------------------------------------------------------------------
+Razorclaw (3886)       : Rend 11572 + Enrage 8599 (bestia, emotes).
+Baron Silverlaine (3887): Shadow Bolt 12739 + Fear 5782 (caster 20 yd).
+Commander Springvale (4278): Cleave 11609 + Hamstring 1715.
+Odo the Blindwatcher (4279): Shadow Bolt 12739 + Fear 5782 (caster, emotes).
+Fenrus the Devourer (4274): Rend 11572 + Enrage 8599 (bestia, emotes).
+Wolf Master Nandos (3927): Rend + Hamstring + Enrage 30%.
+Archmage Arugal (4275) : Shadow Bolt 12739 + Fear 5782; textos/voz oficiales.
+Rethilgore (3914, opcional)   : Rend + Enrage 30% (emotes).
+Deathsworn Captain (3872, rare): Cleave + Hamstring.
+Sever (14682, rare)            : Rend + Knock Away 10101 (emotes).
+
+6. SQL APLICADO (incluye CORRECCIONES de entries)
+--------------------------------------------------------------------------------
+- Limpieza de asignaciones erradas del primer intento:
+  entry 3843 y 4291 se dejaron sin ScriptName (UPDATE ScriptName='').
+- ScriptNames correctos: 3886, 3887, 4278, 4279, 4274, 3927, 4275, 3914,
+  3872, 14682.
+- Textos nuevos en espanol latino: -1033020 a -1033041.
+- Verificacion final del desarrollador: 7/7 jefes de ala con ScriptName OK
+  (incluido Odo 4279, que tiene rank 0 y por eso no salia en consultas
+  con rank > 0).
+
+7. VOCES ASIGNADAS
+--------------------------------------------------------------------------------
+Silverlaine : Moroes (espectro)   9211 / 9214 / 9216
+Springvale  : Medivh (humano)     10436 / 10440 / 10441
+Nandos      : Kargath (orco)      10325 / 10327 / 10328
+Deathsworn  : Aran (espectral)    9324 / 9250 / 9244
+Arugal      : voz oficial propia  5793 / 5795 / 5797
+Bestias (Razorclaw, Fenrus, Rethilgore, Sever): emotes type 3, sin voz.
+
+8. CORRECCIONES DE ENTRIES Y LECCIONES
+--------------------------------------------------------------------------------
+8.1 Razorclaw: supuesto 3843 -> REAL 3886 (volcado del desarrollador).
+8.2 Fenrus   : supuesto 4291 -> REAL 4274 (volcado del desarrollador).
+8.3 Odo (4279) y otros con rank 0 no aparecen en consultas "rank > 0":
+    verificar siempre tambien por nombre (WHERE name LIKE '%...%').
+8.4 "Arugal" entry 10000 es la version de evento/exterior: NO llevar
+    ScriptName; el jefe de mazmorra es 4275.
+8.5 Rares (3872, 14682) y Rethilgore (3914): scripts activos solo cuando
+    spawnean; no interfieren con encounters ni guardado de instancia.
+
+9. PRUEBAS
+--------------------------------------------------------------------------------
+Pendientes: voces y hechizos por ala; gritos oficiales de Arugal con su
+ScriptName nuevo (si no sonaran, revisar AIName EventAI residual en 4275).
+
+================================================================================
+FIN DEL DOCUMENTO - CASTILLO DE COLMILLO OSCURO (MAP 33)
+================================================================================
+
+================================================================================
+DOCUMENTACION DE ARREGLOS Y SCRIPTS - MAZMORRA: ULDAMAN
+================================================================================
+Proyecto      : CMaNGOS TBC (rama oficial mangos-tbc, actualizada)
+Mazmorra      : Uldaman
+Map ID        : 70
+Fecha         : Septiembre 2026
+Estado        : Integrado, compilado y ScriptNames VERIFICADOS 5/5 por
+                consulta del desarrollador. Pruebas en juego pendientes.
+================================================================================
+
+1. OBJETIVO
+--------------------------------------------------------------------------------
+Scriptear los 4 jefes faltantes de Uldaman (Archaedas ya existia en el core),
+con textos en ESPANOL LATINO y voces/emotes segun tipo de criatura.
+
+2. ESTADO PREVIO DEL CORE
+--------------------------------------------------------------------------------
+- boss_archaedas.cpp (Archaedas, entry REAL 2748), instance_uldaman.cpp,
+  uldaman.cpp, uldaman.h.
+- Textos oficiales de Archaedas: -1070001 a -1070004 (sonidos 5855-5858).
+
+3. ARCHIVOS CREADOS (4)
+--------------------------------------------------------------------------------
+Ruta: src/game/AI/ScriptDevAI/scripts/eastern_kingdoms/uldaman/
+  boss_ironaya.cpp / boss_obsidian_sentinel.cpp
+  boss_ancient_stone_keeper.cpp / boss_grimlok.cpp
+
+4. ARCHIVOS MODIFICADOS
+--------------------------------------------------------------------------------
+- ScriptLoader.cpp: 4 externs + 4 llamadas en el bloque de uldaman.
+- Enums corregidos en 2 .cpp tras el volcado real de entries (ver seccion 8).
+- Re-ejecucion de CMake por los .cpp nuevos.
+
+5. JEFES, ENTRIES Y MECANICAS
+--------------------------------------------------------------------------------
+Ironaya (7228)             : Stomp 5589 + Enrage 8599 al 30% (emotes).
+Obsidian Sentinel (7023)   : Knock Away 10101 + Stomp 5589 (emotes).
+Ancient Stone Keeper (7206): Knock Away 10101 + Enrage 8599 al 25% (emotes).
+Grimlok (4854)             : Earth Shock 8045 + Healing Wave 12491 (self <60%).
+
+6. SQL APLICADO (incluye CORRECCIONES de entries)
+--------------------------------------------------------------------------------
+- Limpieza de asignaciones erradas del primer intento: entries 7229 y 4857
+  se dejaron sin ScriptName.
+- ScriptNames correctos: 4854 (boss_grimlok), 7023 (boss_obsidian_sentinel),
+  7206 (boss_ancient_stone_keeper), 7228 (boss_ironaya).
+- Textos nuevos en espanol latino: -1070005 a -1070013.
+- Verificacion final del desarrollador: 5/5 con ScriptName OK (2748, 4854,
+  7023, 7206, 7228).
+
+7. VOCES ASIGNADAS
+--------------------------------------------------------------------------------
+Grimlok : Maulgar (ogro) 11367 / 11373 / 11369 (trogg con voz de ogro).
+Ironaya / Obsidian Sentinel / Ancient Stone Keeper: constructos de piedra,
+emotes type 3 sin voz (sus modelos ya emiten sonidos propios).
+
+8. CORRECCIONES DE ENTRIES Y LECCIONES
+--------------------------------------------------------------------------------
+8.1 Obsidian Sentinel  : supuesto 7229 -> REAL 7023.
+8.2 Ancient Stone Keeper: supuesto 4857 -> REAL 7206.
+    TRAMPA DETECTADA: "Stone Keeper" (4857) es una criatura DISTINTA de
+    "Ancient Stone Keeper" (7206); no asignar script al 4857.
+8.3 Ironaya (7228) tiene rank 0: no aparecia en consultas "rank > 0";
+    verificada por nombre y confirmada por ScriptName.
+8.4 Archaedas del core es entry 2748 (no 4857 como se supuso al principio);
+    no se toco su script.
+8.5 Pendientes opcionales para futura pasada: Galgann Firehammer (7291) y
+    los Enanos Perdidos Baelog (6906), Eric (6907), Olaf (6908).
+
+9. PRUEBAS
+--------------------------------------------------------------------------------
+Pendientes: Grimlok (shock + autocuracion), constructos (knock away/stomp/
+enrage), emotes de piedra, Archaedas sin cambios.
+
+================================================================================
+FIN DEL DOCUMENTO - ULDAMAN (MAP 70)
+================================================================================
+
+================================================================================
+DOCUMENTACION DE ARREGLOS Y SCRIPTS - MAZMORRA: CUEVAS DE LOS LAMENTOS
+================================================================================
+Proyecto      : CMaNGOS TBC (rama oficial mangos-tbc, actualizada)
+Mazmorra      : Wailing Caverns / Cuevas de los Lamentos
+Map ID        : 43
+Fecha         : Septiembre 2026
+Estado        : Integrado, compilado y ScriptNames VERIFICADOS 7/7 por
+                consulta del desarrollador. Pruebas en juego pendientes.
+================================================================================
+
+1. OBJETIVO
+--------------------------------------------------------------------------------
+Scriptear los 7 jefes de la mazmorra (el core solo tenia instancia y zona),
+con textos en ESPANOL LATINO, voces para los lores druidas y emotes para
+las bestias.
+
+2. ESTADO PREVIO DEL CORE
+--------------------------------------------------------------------------------
+- instance_wailing_caverns.cpp y wailing_caverns.cpp (sin jefes).
+- Evento de Naralex (Disciple of Naralex 3678) ligado a la aparicion de
+  Mutanus; los scripts nuevos no interfieren con el evento.
+
+3. ARCHIVOS CREADOS (7)
+--------------------------------------------------------------------------------
+Ruta: src/game/AI/ScriptDevAI/scripts/kalimdor/wailing_caverns/
+  boss_lord_cobrahn.cpp / boss_lord_pythas.cpp / boss_lord_serpentis.cpp
+  boss_kresh.cpp / boss_skum.cpp / boss_verdan_the_everliving.cpp
+  boss_mutanus_the_devourer.cpp
+
+4. ARCHIVOS MODIFICADOS
+--------------------------------------------------------------------------------
+- ScriptLoader.cpp: 7 externs + 7 llamadas en el bloque de wailing_caverns.
+- Re-ejecucion de CMake por los .cpp nuevos.
+
+5. JEFES, ENTRIES Y MECANICAS
+--------------------------------------------------------------------------------
+Lord Cobrahn (3669)   : Rend 11572 + Hamstring 1715.
+Lord Pythas (3670)    : Earth Shock 8045 + Renew 6078 (self <60%).
+Lord Serpentis (3673) : Stomp 5589 + Enrage 8599 al 30%.
+Kresh (3653)          : Stomp 5589 (tortuga, emotes).
+Skum (3674)           : Rend 11572 + Enrage 8599 al 30% (emotes).
+Verdan the Everliving (5775): Toxic Volley 21687 + Renew 6078 (<70%, emotes).
+Mutanus the Devourer (3654) : Rend 11572 + Knock Away 10101 + Enrage 25%.
+
+6. SQL APLICADO
+--------------------------------------------------------------------------------
+- ScriptNames: 3669, 3670, 3673, 3653, 3674, 5775, 3654 (verificacion final
+  del desarrollador: 7/7 OK, incluido Mutanus 3654 con rank 0).
+- Textos nuevos en espanol latino: -1043020 a -1043036 (convencion map 043).
+- Sin correcciones de entries: los 6 supuestos coincidieron con el volcado
+  real de map 43; Mutanus se confirmo por nombre/ScriptName.
+
+7. VOCES ASIGNADAS
+--------------------------------------------------------------------------------
+Lord Cobrahn  : Moroes (humano seco)  9211 / 9214 / 9216
+Lord Pythas   : Aran (espectral)      9324 / 9250 / 9244
+Lord Serpentis: Maladaar (cultista)   10515 / 10515 / 10510
+Kresh, Skum, Verdan, Mutanus: bestias, emotes type 3 sin voz (kits de
+sonido de modelo ya rugen/grunen automaticamente).
+
+8. LECCIONES TECNICAS
+--------------------------------------------------------------------------------
+8.1 Mutanus (3654) tiene rank 0: no aparece en consultas "rank > 0";
+    misma leccion que Odo (Colmillo) e Ironaya (Uldaman).
+8.2 Toxic Volley 21687 elegido sobre 25812 por incluir DoT de veneno,
+    fiel al comportamiento clasico de Verdan.
+8.3 Pendiente opcional: Deviate Faerie Dragon (5912, rank 2) como rare.
+
+9. PRUEBAS
+--------------------------------------------------------------------------------
+Pendientes: voces de los 3 lores druidas, DoT de Toxic Volley de Verdan,
+Renew de Pythas/Verdan, Enrage de Serpentis/Skum/Mutanus, aparicion de
+Mutanus via evento de Naralex.
+
+================================================================================
+FIN DEL DOCUMENTO - CUEVAS DE LOS LAMENTOS (MAP 43)
+================================================================================
 
 
+================================================================================
+BITÁCORA TÉCNICA — EQUIPO PvE/PvP, LOOT INTELIGENTE Y SPECS A CUALQUIER NIVEL
+Proyecto: CMaNGOS TBC + PlayerBots/NPCBots (Razormaw/EMU-CMANG-TBC-BOTS)
+Fecha: Septiembre 2026
+Estado: COMPILADO Y VERIFICADO EN JUEGO ✔
+================================================================================
 
+1. SISTEMA DE DOBLE SET DE EQUIPO: PvE PARA MAZMORRAS, PvP PARA COMBATE
+--------------------------------------------------------------------------------
+Se implementó un sistema de contexto que permite a los npcbots manejar dos
+vestuarios completos y alternarlos automáticamente:
+
+a) Set PvE: equipo de mazmorra/raid sin resiliencia, optimizado por pesos de
+   stats según la spec activa (tanque, sanador o DPS).
+b) Set PvP: equipo con resiliencia priorizada, para battlegrounds, arenas y
+   asaltos a ciudades.
+
+Componentes:
+  - PlayerbotAI::IsInPvPContext(): detecta el contexto de combate. Devuelve
+    verdadero si el bot está en battleground, en arena, o dentro de una
+    capital de la facción contraria (Orgrimmar, Cima del Trueno, Entrañas y
+    Lunargenta para bots de la Alianza; Ventormenta, Forjaz, Darnassus y
+    Exodar para bots de la Horda).
+  - PlayerbotAI::CheckPvPGearSwap(elapsed): revisa el contexto cada 5
+    segundos, fuera de combate y con el bot vivo. Al detectar un cambio de
+    contexto, ordena el re-equipamiento completo.
+  - PlayerbotFactory::EquipPvPSet(bool pvp): re-equipa al bot de cabeza a
+    pies con el set correspondiente, incluyendo gemas y encantamientos.
+  - RandomItemMgr::CalculateStatWeight(): incorpora el "modo PvP" mediante
+    la convención spec + 100. En modo PvE, las piezas con resiliencia quedan
+    excluidas del pool; en modo PvP, la resiliencia suma un bono de peso
+    (peso base + 50% + 10 por punto de resiliencia), de modo que los sets
+    de arena y honor suben al primer lugar de la lista de candidatos.
+
+Comportamiento en juego:
+  - El bot entra a un BG o a una capital enemiga → en cuanto está fuera de
+    combate, viste su set PvP completo.
+  - Sale del BG o vuelve a territorio propio → recupera su set PvE.
+  - En mazmorras y raids nunca aparece resiliencia en su equipo.
+
+2. PROTECCIÓN DE LOOT Y AUTO-EQUIPO INTELIGENTE
+--------------------------------------------------------------------------------
+Se añadió una capa de decisión que garantiza que el equipo de los bots solo
+mejore, nunca empeore, y que lo ganado en grupo se aproveche:
+
+a) RandomItemMgr::IsUpgradeFor(bot, proto, slot, specId): compara el peso de
+   stats del item candidato contra el peso del item actualmente equipado en
+   ese slot. Solo devuelve verdadero si el candidato es estrictamente mejor.
+   Valida además clase, raza, nivel requerido y posibilidad de equipar.
+b) RandomItemMgr::IsUpgradeAnySlot(bot, proto, specId): determina el slot
+   destino según el tipo de inventario del item y delega en IsUpgradeFor.
+c) RandomItemMgr::GetSlotForItem(proto): traduce el InventoryType del item
+   (cabeza, hombros, anillos, trinkets, armas, reliquias, etc.) al slot de
+   equipo correspondiente, incluyendo las equivalencias de armas de
+   lanzamiento (slot de ranged) y mano secundaria.
+d) Regla "solo mejoras" en PlayerbotFactory::InitEquipment: durante cualquier
+   re-equipamiento, un item equipado jamás se sustituye por otro de peso
+   igual o menor. El loot de raid y mazmorra queda así protegido.
+e) Auto-equipo desde bolsas en PlayerbotAI::UpdateAIInternal: cada tick, fuera
+   de combate, el bot recorre su inventario; si encuentra un arma o armadura
+   que sea mejora para su spec, la equipa mediante Player::SwapItem, que hace
+   el intercambio seguro (el item nuevo entra al slot y el viejo pasa a la
+   bolsa, sin destruir nada).
+f) Rolls de necesidad: con IsUpgradeAnySlot integrado en la evaluación de
+   loot, el bot rolea NECESIDAD únicamente cuando el item que cae es una
+   mejora real para su spec actual; en cualquier otro caso rolea codicia o
+   pasa, comportándose como un jugador consciente.
+
+3. CAMBIO DE SPEC Y TALENTOS A CUALQUIER NIVEL (apoyo durante el leveo)
+--------------------------------------------------------------------------------
+Se habilitó que los npcbots reciban una spec completa (tanque, DPS o sanador)
+sin importar su nivel, para acompañar al personaje real mientras sube:
+
+a) TalentSpec::CropTalents(bot): toma un build diseñado para nivel 70 y lo
+   recorta con inteligencia hasta los puntos de talento que el bot posee por
+   su nivel actual (nivel - 9). El recorte prioriza el árbol principal de la
+   spec (ordenado por puntos de árbol) y dentro de él respeta el orden natural
+   de filas y columnas, de modo que los prerrequisitos quedan siempre
+   cubiertos: el bot de nivel 40 recibe los primeros 31 puntos del build de
+   tanque, por ejemplo, y ya tanquea con coherencia.
+b) Sobrecarga TalentSpec::CheckTalents(Player* bot, out): antes de validar el
+   build contra los puntos disponibles, invoca CropTalents automáticamente si
+   el build excede los puntos del bot. Así, cualquier cuerda de talentos de
+   nivel 70 del Gestor de Specs funciona directamente sobre bots de nivel
+   inferior, sin versiones recortadas manuales.
+c) Integración con el Gestor de Specs de Bots: al pulsar "Proteccion PvE
+   (Tanque)", "Elemental PvE (DPS)" o similares sobre un bot de bajo nivel,
+   el bot aplica los talentos recortados, sincroniza sus estrategias de rol
+   (tanquear, healear o dps) en los cuatro motores de IA, y se re-equipa con
+   gear, gemas y encantamientos apropiados a su nivel gracias a la caché de
+   equipo por nivel.
+
+Uso práctico: mientras el personaje real levea de 1 a 70, puede llamar a un
+npcbot de su nivel y asignarle el rol que el grupo necesite en ese momento
+(tanque para calas, sanador para elites, DPS para mazmorras), y el bot se
+adapta al instante.
+
+4. VERIFICACIONES REALIZADAS EN JUEGO
+--------------------------------------------------------------------------------
+  [OK] Cambio de spec en bots nivel 70: talentos, equipo, gemas y encants
+       aplicados en modo PvE y PvP.
+  [OK] Cambio de spec en bots de bajo nivel: build recortado correcto, rol
+       activo y equipo acorde al nivel.
+  [OK] Swap automático a set PvP dentro de battleground y en capitales
+       enemigas; regreso al set PvE al salir.
+  [OK] Sin resiliencia en equipo PvE de mazmorras y raids.
+  [OK] Loot de grupo: rolls de necesidad solo en mejoras reales; lo ganado se
+       equipa automáticamente y se conserva (sin sustituciones a la baja).
+  [OK] Intercambio seguro de equipo: el item sustituido pasa a la bolsa.
+
+5. ARCHIVOS MODIFICADOS EN ESTA ETAPA
+--------------------------------------------------------------------------------
+  - src/game/PlayerBot/playerbot/RandomItemMgr.h
+  - src/game/PlayerBot/playerbot/RandomItemMgr.cpp
+  - src/game/PlayerBot/playerbot/PlayerbotFactory.h
+  - src/game/PlayerBot/playerbot/PlayerbotFactory.cpp
+  - src/game/PlayerBot/playerbot/PlayerbotAI.h
+  - src/game/PlayerBot/playerbot/PlayerbotAI.cpp
+  - src/game/PlayerBot/playerbot/Talentspec.h
+  - src/game/PlayerBot/playerbot/Talentspec.cpp
+
+9. NOTAS FINALES
+--------------------------------------------------------------------------------
+- Con estos tres sistemas (doble set PvE/PvP, loot inteligente y specs a
+  cualquier nivel), los npcbots se comportan como compañeros de juego
+  completos: eligen su rol, visten según el contexto, protegen su equipo y
+  acompañan al personaje real desde nivel 1 hasta el contenido final.
+- Todos los sistemas respetan el diseño progresivo del servidor: el equipo
+  se gana jugando, y los bots crecen junto con su Guild Master.
+
+                        --- FIN DEL DOCUMENTO ---
+     "Un tanque a nivel 40 con escudo y valor: eso también es Azeroth."
+                         Salud, héroes de la tormenta. 🍻
+================================================================================
 
 
 ===============================================================================

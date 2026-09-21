@@ -62,6 +62,12 @@ extern void AddSC_boss_victor_nefarius();
 extern void AddSC_instance_blackwing_lair();
 extern void AddSC_boss_mr_smite();                          // deadmines
 extern void AddSC_deadmines();
+extern void AddSC_boss_rahhkzor();
+extern void AddSC_boss_sneeds_shredder();
+extern void AddSC_boss_sneed();
+extern void AddSC_boss_gilnid();
+extern void AddSC_boss_captain_greenskin();
+extern void AddSC_boss_edwin_vanclef();
 extern void AddSC_instance_deadmines();
 extern void AddSC_gnomeregan();                             // gnomeregan
 extern void AddSC_boss_thermaplugg();
@@ -132,6 +138,16 @@ extern void AddSC_instance_scholomance();
 extern void AddSC_scholomance();
 extern void AddSC_shadowfang_keep();                        // shadowfang_keep
 extern void AddSC_instance_shadowfang_keep();
+extern void AddSC_boss_rethilgore();
+extern void AddSC_boss_deathsworn_captain();
+extern void AddSC_boss_sever();
+extern void AddSC_boss_razorclaw_the_butcher();
+extern void AddSC_boss_baron_silverlaine();
+extern void AddSC_boss_commander_springvale();
+extern void AddSC_boss_odo_the_blindwatcher();
+extern void AddSC_boss_fenrus_the_devourer();
+extern void AddSC_boss_wolf_master_nandos();
+extern void AddSC_boss_archmage_arugal();
 extern void AddSC_boss_targorr_the_dread();                 // stockade
 extern void AddSC_boss_kam_deepfury();
 extern void AddSC_boss_hamhock();
@@ -156,6 +172,10 @@ extern void AddSC_boss_muru();
 extern void AddSC_instance_sunwell_plateau();
 extern void AddSC_sunwell_plateau();
 extern void AddSC_boss_archaedas();                         // uldaman
+extern void AddSC_boss_ironaya();
+extern void AddSC_boss_obsidian_sentinel();
+extern void AddSC_boss_ancient_stone_keeper();
+extern void AddSC_boss_grimlok();
 extern void AddSC_instance_uldaman();
 extern void AddSC_uldaman();
 extern void AddSC_boss_akilzon();                           // zulaman
@@ -252,6 +272,13 @@ extern void AddSC_mob_anubisath_sentinel();
 extern void AddSC_instance_temple_of_ahnqiraj();
 extern void AddSC_instance_wailing_caverns();               // wailing_caverns
 extern void AddSC_wailing_caverns();
+extern void AddSC_boss_lord_cobrahn();
+extern void AddSC_boss_lord_pythas();
+extern void AddSC_boss_lord_serpentis();
+extern void AddSC_boss_kresh();
+extern void AddSC_boss_skum();
+extern void AddSC_boss_verdan_the_everliving();
+extern void AddSC_boss_mutanus_the_devourer();
 extern void AddSC_boss_zumrah();                            // zulfarrak
 extern void AddSC_boss_antusul();
 extern void AddSC_boss_theka_the_martyr();
@@ -446,6 +473,12 @@ void AddScripts()
     AddSC_instance_blackwing_lair();
     AddSC_deadmines();                                      // deadmines
     AddSC_boss_mr_smite();
+	AddSC_boss_rahhkzor();
+    AddSC_boss_sneeds_shredder();
+    AddSC_boss_sneed();
+    AddSC_boss_gilnid();
+    AddSC_boss_captain_greenskin();
+    AddSC_boss_edwin_vanclef();
     AddSC_instance_deadmines();
     AddSC_gnomeregan();                                     // gnomeregan
     AddSC_boss_thermaplugg();
@@ -516,6 +549,16 @@ void AddScripts()
     AddSC_scholomance();
     AddSC_shadowfang_keep();                                // shadowfang_keep
     AddSC_instance_shadowfang_keep();
+	AddSC_boss_rethilgore();
+    AddSC_boss_deathsworn_captain();
+    AddSC_boss_sever();
+	AddSC_boss_razorclaw_the_butcher();
+    AddSC_boss_baron_silverlaine();
+    AddSC_boss_commander_springvale();
+    AddSC_boss_odo_the_blindwatcher();
+    AddSC_boss_fenrus_the_devourer();
+    AddSC_boss_wolf_master_nandos();
+    AddSC_boss_archmage_arugal();
 	AddSC_boss_targorr_the_dread();                         // stockade
     AddSC_boss_kam_deepfury();
     AddSC_boss_hamhock();
@@ -542,6 +585,10 @@ void AddScripts()
     AddSC_boss_archaedas();                                 // uldaman
     AddSC_instance_uldaman();
     AddSC_uldaman();
+	AddSC_boss_ironaya();
+    AddSC_boss_obsidian_sentinel();
+    AddSC_boss_ancient_stone_keeper();
+    AddSC_boss_grimlok();
     AddSC_boss_akilzon();                                   // zulaman
     AddSC_boss_halazzi();
     AddSC_boss_janalai();
@@ -636,6 +683,13 @@ void AddScripts()
     AddSC_instance_temple_of_ahnqiraj();
     AddSC_instance_wailing_caverns();                       // wailing_caverns
     AddSC_wailing_caverns();
+	AddSC_boss_lord_cobrahn();
+    AddSC_boss_lord_pythas();
+    AddSC_boss_lord_serpentis();
+    AddSC_boss_kresh();
+    AddSC_boss_skum();
+    AddSC_boss_verdan_the_everliving();
+    AddSC_boss_mutanus_the_devourer();
     AddSC_boss_zumrah();                                    // zulfarrak
     AddSC_boss_antusul();
     AddSC_boss_theka_the_martyr();

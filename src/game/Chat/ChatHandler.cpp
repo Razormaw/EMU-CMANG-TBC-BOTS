@@ -36,6 +36,7 @@
 #include "Grids/CellImpl.h"
 #include "GMTickets/GMTicketMgr.h"
 #include "Anticheat/Anticheat.hpp"
+#include "PlayerBot/playerbot/TabernaConversationMgr.h"
 
 #ifdef ENABLE_PLAYERBOTS
 #include "playerbot/playerbot.h"
@@ -350,6 +351,9 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recv_data)
             group->BroadcastPacket(data, false, group->GetMemberGroup(GetPlayer()->GetObjectGuid()));
 
 #ifdef ENABLE_PLAYERBOTS
+			            // [HOOK GRUPO-IA]
+                if (GetPlayer() && !GetPlayer()->GetPlayerbotAI() && lang != LANG_ADDON)
+                sTabernaConvMgr.OnGuildPlayerSpeaks(GetPlayer(), msg);
             for (GroupReference* itr = group->GetFirstMember(); itr != NULL; itr = itr->next())
             {
                 Player* player = itr->getSource();
@@ -385,6 +389,9 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recv_data)
             if (GetPlayer()->GetGuildId())
                 if (Guild* guild = sGuildMgr.GetGuildById(GetPlayer()->GetGuildId()))
                     guild->BroadcastToGuild(this, msg, lang == LANG_ADDON ? LANG_ADDON : LANG_UNIVERSAL);
+					            // [HOOK GREMIO-IA] diagnostico + captura de jugador real
+				if (GetPlayer() && !GetPlayer()->GetPlayerbotAI() && lang != LANG_ADDON)
+					sTabernaConvMgr.OnPartyPlayerSpeaks(GetPlayer(), msg, false);
 
 #ifdef ENABLE_PLAYERBOTS
             PlayerbotMgr* mgr = GetPlayer()->GetPlayerbotMgr();
@@ -464,7 +471,10 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recv_data)
             group->BroadcastPacket(data, false);
 
 #ifdef ENABLE_PLAYERBOTS
-            for (GroupReference* itr = group->GetFirstMember(); itr != NULL; itr = itr->next())
+			            // [HOOK RAID-IA]
+                if (GetPlayer() && !GetPlayer()->GetPlayerbotAI() && lang != LANG_ADDON)
+					sTabernaConvMgr.OnPartyPlayerSpeaks(GetPlayer(), msg, true);
+				for (GroupReference* itr = group->GetFirstMember(); itr != NULL; itr = itr->next())
             {
                 Player* player = itr->getSource();
                 if (player && player->GetPlayerbotAI())

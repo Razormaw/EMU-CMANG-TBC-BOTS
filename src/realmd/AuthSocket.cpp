@@ -341,7 +341,13 @@ bool AuthSocket::_HandleLogonChallenge()
         if ((remaining < sizeof(sAuthLogonChallengeBody) - AUTH_LOGON_MAX_NAME))
             return;
 
-        DEBUG_LOG("[AuthChallenge] got header, body is %#04x bytes", remaining);
+        f (remaining > sizeof(sAuthLogonChallengeBody))
+        {
+            self->Close();
+            return;
+        }
+
+		DEBUG_LOG("[AuthChallenge] got header, body is %#04x bytes", remaining);
 
         ///- Session is closed unless overriden
         self->_status = STATUS_CLOSED;
@@ -389,7 +395,7 @@ bool AuthSocket::_HandleLogonChallenge()
 
             self->m_locale.resize(sizeof(body->country));
             self->m_locale.assign(body->country, (body->country + sizeof(body->country)));
-            std::reverse(self->m_locale.begin(), self->m_locale.end());
+			std::reverse(self->m_locale.begin(), self->m_locale.end());
 
             ///- Normalize account name
             // utf8ToUpperOnlyLatin(_login); -- client already send account in expected form
@@ -489,7 +495,8 @@ bool AuthSocket::_HandleLogonChallenge()
                             pkt->append(self->srp.GetGeneratorModulo().AsByteArray());
                             *pkt << uint8(32);
                             pkt->append(self->srp.GetPrime().AsByteArray(32));
-                            pkt->append(s.AsByteArray());// 32 bytes
+                            pkt->append(s.AsByteArray(32));// 32 bytes
+							pkt->append(s.AsByteArray());// 32 bytes
                             pkt->append(VersionChallenge.data(), VersionChallenge.size());
                             uint8 securityFlags = 0;
 
@@ -722,7 +729,13 @@ bool AuthSocket::_HandleReconnectChallenge()
         if ((remaining < sizeof(sAuthLogonChallengeBody) - 10))
             return;
 
-        ///- Session is closed unless overriden
+                if (remaining > sizeof(sAuthLogonChallengeBody))
+        {
+            self->Close();
+            return;
+        }
+		
+		///- Session is closed unless overriden
         self->_status = STATUS_CLOSED;
 
         std::shared_ptr<sAuthLogonChallengeBody> body = std::make_shared<sAuthLogonChallengeBody>();

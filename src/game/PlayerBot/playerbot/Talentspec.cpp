@@ -384,14 +384,16 @@ void TalentSpec::CropTalents(Player* bot)
 
     SortTalents(talents, SORT_BY_POINTS_TREE);
 
-    int points = 0;
+    int currentPoints = 0;
 
     for (auto& entry : talents)
     {
-        if (points + entry.rank > (int)bot->CalculateTalentsPoints())
-            entry.rank = std::max(0, (int)(bot->CalculateTalentsPoints() - points));
-        points += entry.rank;
+        if (currentPoints + entry.rank > (int)bot->CalculateTalentsPoints())
+            entry.rank = std::max(0, (int)(bot->CalculateTalentsPoints() - currentPoints));
+        currentPoints += entry.rank;
     }
+
+    this->points = currentPoints; // FIX: Guardamos los puntos recortados en la variable real de la clase
 
     SortTalents(talents, SORT_BY_DEFAULT);
 }

@@ -109,7 +109,6 @@ enum ChatChannelId
     LOCAL_DEFENSE = 22,
     WORLD_DEFENSE = 23,
 #ifdef MANGOSBOT_ZERO
-    //Yes, for 1.12 it is 24
     LOOKING_FOR_GROUP = 24,
 #else
     LOOKING_FOR_GROUP = 26,
@@ -184,7 +183,7 @@ enum SharpeningStoneDisplayId
    HEAVY_SHARPENING_DISPLAYID = 24675,
    SOLID_SHARPENING_DISPLAYID = 24676,
    DENSE_SHARPENING_DISPLAYID = 24677,
-   CONSECRATED_SHARPENING_DISPLAYID = 24674,    // will not be used because bot can not know if it will face undead targets
+   CONSECRATED_SHARPENING_DISPLAYID = 24674,
    ELEMENTAL_SHARPENING_DISPLAYID = 21072,
    FEL_SHARPENING_DISPLAYID = 39192,
    ADAMANTITE_SHARPENING_DISPLAYID = 39193,
@@ -202,7 +201,6 @@ enum WeightStoneDisplayId
 };
 
 #ifdef MANGOSBOT_ZERO
-// m_zero
 enum WizardOilDisplayId
 {
     MINOR_WIZARD_OIL = 33194,
@@ -210,9 +208,7 @@ enum WizardOilDisplayId
     BRILLIANT_WIZARD_OIL = 33452,
     WIZARD_OIL = 33451,
     SUPERIOR_WIZARD_OIL = 47904,
-    /// Blessed Wizard Oil = 26865,//scourge inv
 };
-// m_zero
 enum ManaOilDisplayId
 {
     MINOR_MANA_OIL = 33453,
@@ -228,7 +224,6 @@ enum WizardOilDisplayId
    BRILLIANT_WIZARD_OIL = 47901,
    WIZARD_OIL           = 47905,
    SUPERIOR_WIZARD_OIL  = 47904,
-  /// Blessed Wizard Oil = 26865,//scourge inv
 };
 
 enum ManaOilDisplayId
@@ -382,6 +377,8 @@ public:
     void HandleCommand(uint32 type, const std::string& text, Player& fromPlayer, const uint32 lang = LANG_UNIVERSAL);
     void QueueChatResponse(uint32 msgType, ObjectGuid guid1, ObjectGuid guid2, std::string message, std::string chanName, std::string name, bool noDelay = false);
 	void HandleBotOutgoingPacket(const WorldPacket& packet);
+	void HandleLootStartRoll(const WorldPacket& packet);
+    void HandleItemPushResult(const WorldPacket& packet);
     void HandleMasterIncomingPacket(const WorldPacket& packet);
     void HandleMasterOutgoingPacket(const WorldPacket& packet);
 	void HandleTeleportAck();
@@ -574,27 +571,20 @@ public:
 	Player* GetBot() { return bot; }
     Player* GetMaster() { return master; }
 
-    //Checks if the bot is really a player. Players always have themselves as master.
     bool IsRealPlayer() { return bot->GetSession()->GetRemoteAddress() != "disconnected/bot"; }
     bool IsRealPlayer(Unit* unit) { return unit->IsPlayer() && ((Player*)unit)->GetSession()->GetRemoteAddress() != "disconnected/bot"; }
     bool IsSelfMaster() { return master ? (master == bot) : false; }
-    //Bot has a master that is a player.
     bool HasRealPlayerMaster() { return master && (!master->GetPlayerbotAI() || master->GetPlayerbotAI()->IsRealPlayer()); } 
-    //Bot has a master that is actively playing.
     bool HasActivePlayerMaster() const { return master && !master->GetPlayerbotAI(); }
-    //Checks if the bot is summoned as alt of a player
     bool IsAlt() { return HasRealPlayerMaster() && !sRandomPlayerbotMgr.IsRandomBot(bot); }
-    //Get the group leader or the master of the bot.
     Player* GetGroupMaster() { return bot->InBattleGround() ? master : bot->GetGroup() ? (sObjectMgr.GetPlayer(bot->GetGroup()->GetLeaderGuid()) ? sObjectMgr.GetPlayer(bot->GetGroup()->GetLeaderGuid()) : master) : master; }
 
     bool IsGroupLeader() { return bot->GetGroup() && bot->GetGroup()->GetLeaderGuid() == bot->GetObjectGuid(); }
 
-    //Check if player is safe to use.    
     static bool IsSafe(Player* player, WorldObject* obj) {return obj && obj->GetMapId() == player->GetMapId() && obj->GetInstanceId() == player->GetInstanceId() && (!obj->IsPlayer() || !((Player*)obj)->IsBeingTeleported() || !((Player*)obj)->GetSession()->GetPlayer()); }
     bool IsSafe(WorldObject* obj) { return IsSafe(bot, obj); }
     bool IsSafe(Player* player) { return IsSafe(bot, player); }
 
-    //Returns a semi-random (cycling) number that is fixed for each bot.
     uint32 GetFixedBotNumber(BotTypeNumber typeNumber, uint32 maxNum = 100, float cyclePerMin = 1, bool ignoreGuid = false); 
 
     GrouperType GetGrouperType();
@@ -605,7 +595,6 @@ public:
     bool HasPlayerNearby(float range = sPlayerbotAIConfig.reactDistance);
     bool HasManyPlayersNearby(uint32 trigerrValue = 20, float range = sPlayerbotAIConfig.sightDistance);
     bool ChannelHasRealPlayer(std::string channelName);
-
 
     ActivePiorityType GetPriorityType();
     std::pair<uint32,uint32> GetPriorityBracket(ActivePiorityType type);
@@ -656,6 +645,8 @@ public:
     bool IsInPve();
     bool IsInPvp();
     bool IsInRaid();
+	bool IsInPvPContext();
+    void CheckPvPGearSwap(uint32 elapsed);
 
     void SetMoveToTransport(bool flag = true) { isMovingToTransport = flag; }
     bool GetMoveToTransport() { return isMovingToTransport; }
@@ -665,7 +656,7 @@ public:
 
     PlayerTalentSpec GetTalentSpec();
     void UpdateTalentSpec(PlayerTalentSpec spec = PlayerTalentSpec::TALENT_SPEC_INVALID);
-    void ResetSpecStrategies();   // <-- NUEVO: sincroniza estrategias con la rama de talentos
+    void ResetSpecStrategies();   // Sincroniza estrategias con la rama de talentos
 
     bool CanEnterArea(const AreaTrigger* area);
     void Unmount();
@@ -725,6 +716,8 @@ protected:
     bool isPlayerFriend = false;
     bool isMovingToTransport = false;
     bool shouldLogOut = false;
+	bool m_pvpGearSet = false;
+    uint32 m_pvpGearCheckTimer = 0;
     bool m_recordMessages = false;
     bool m_recordIncommingMessages = false;
     std::vector<std::string> m_recordedMessages;

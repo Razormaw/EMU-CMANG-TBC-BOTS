@@ -26,6 +26,90 @@
 
 using namespace ai;
 
+// === SISTEMA PvP/PvE: helpers locales ===
+static uint8 InventoryTypeToBaseSlotPvP(uint32 invType)
+{
+    switch (invType)
+    {
+        case INVTYPE_HEAD:      return EQUIPMENT_SLOT_HEAD;
+        case INVTYPE_NECK:      return EQUIPMENT_SLOT_NECK;
+        case INVTYPE_SHOULDERS: return EQUIPMENT_SLOT_SHOULDERS;
+        case INVTYPE_CHEST:
+        case INVTYPE_ROBE:      return EQUIPMENT_SLOT_CHEST;
+        case INVTYPE_WAIST:     return EQUIPMENT_SLOT_WAIST;
+        case INVTYPE_LEGS:      return EQUIPMENT_SLOT_LEGS;
+        case INVTYPE_FEET:      return EQUIPMENT_SLOT_FEET;
+        case INVTYPE_WRISTS:    return EQUIPMENT_SLOT_WRISTS;
+        case INVTYPE_HANDS:     return EQUIPMENT_SLOT_HANDS;
+        case INVTYPE_FINGER:    return EQUIPMENT_SLOT_FINGER1;
+        case INVTYPE_TRINKET:   return EQUIPMENT_SLOT_TRINKET1;
+        case INVTYPE_SHIELD:
+        case INVTYPE_HOLDABLE:
+        case INVTYPE_WEAPONOFFHAND: return EQUIPMENT_SLOT_OFFHAND;
+        case INVTYPE_WEAPON:
+        case INVTYPE_WEAPONMAINHAND:
+        case INVTYPE_2HWEAPON:  return EQUIPMENT_SLOT_MAINHAND;
+        case INVTYPE_RANGED:
+        case INVTYPE_RELIC:     return EQUIPMENT_SLOT_RANGED;
+        default:                return EQUIPMENT_SLOT_END;
+    }
+}
+
+static std::vector<uint32> QueryPvPItems(uint32 level, uint8 cls, uint8 slot)
+{
+    static std::vector<uint32> pvpCache;
+    if (pvpCache.empty())
+    {
+        for (uint32 itemId = 1; itemId < sItemStorage.GetMaxEntry(); ++itemId)
+        {
+            ItemPrototype const* p = sObjectMgr.GetItemPrototype(itemId);
+            if (!p)
+                continue;
+            if (p->Class != ITEM_CLASS_ARMOR && p->Class != ITEM_CLASS_WEAPON)
+                continue;
+            if (p->Quality < ITEM_QUALITY_RARE)
+                continue;
+            for (int i = 0; i < MAX_ITEM_PROTO_STATS; ++i)
+            {
+                if (p->ItemStat[i].ItemStatValue > 0 && p->ItemStat[i].ItemStatType == ITEM_MOD_RESILIENCE_RATING)
+                {
+                    pvpCache.push_back(itemId);
+                    break;
+                }
+            }
+        }
+    }
+
+    uint8 baseSlot = slot;
+    if (slot == EQUIPMENT_SLOT_FINGER2)  baseSlot = EQUIPMENT_SLOT_FINGER1;
+    if (slot == EQUIPMENT_SLOT_TRINKET2) baseSlot = EQUIPMENT_SLOT_TRINKET1;
+
+    uint32 classMask = 1 << (cls - 1);
+    std::vector<uint32> result;
+    for (uint32 itemId : pvpCache)
+    {
+        ItemPrototype const* p = sObjectMgr.GetItemPrototype(itemId);
+        if (!p)
+            continue;
+        if (p->RequiredLevel > level)
+            continue;
+        if (p->AllowableClass && !(p->AllowableClass & classMask))
+            continue;
+        if (InventoryTypeToBaseSlotPvP(p->InventoryType) != baseSlot)
+            continue;
+        result.push_back(itemId);
+    }
+
+    std::sort(result.begin(), result.end(), [](uint32 a, uint32 b)
+    {
+        ItemPrototype const* pa = sObjectMgr.GetItemPrototype(a);
+        ItemPrototype const* pb = sObjectMgr.GetItemPrototype(b);
+        return pa->ItemLevel > pb->ItemLevel;
+    });
+    return result;
+}
+// === FIN helpers PvP ===
+
 #define PLAYER_SKILL_INDEX(x)       (PLAYER_SKILL_INFO_1_1 + ((x)*3))
 
 uint32 PlayerbotFactory::tradeSkills[] =
@@ -2968,17 +3052,18 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool syncWithMaster, bool
     }
 
     bool isRandomBot = sRandomPlayerbotMgr.IsRandomBot(bot) && bot->GetPlayerbotAI() && !bot->GetPlayerbotAI()->HasRealPlayerMaster() && !bot->GetPlayerbotAI()->IsInRealGuild();
+        uint32 specId = sRandomItemMgr.GetPlayerSpecId(bot);
+    if (specId == 0)
+        return;   // sin spec válida NO tocamos el equipo: nunca más bots naked
+
+    // === MODO PvP: si pvpSet, consultamos pesos con bonus de resiliencia (spec + 100) ===
+    const uint32 specQuery = specId + (pvpSet ? 100 : 0);
+
     if (!incremental)
     {
         DestroyItemsVisitor visitor(bot);
         ai->InventoryIterateItems(&visitor, IterateItemsMask::ITERATE_ITEMS_IN_EQUIP);
     }
-
-    uint32 specId = sRandomItemMgr.GetPlayerSpecId(bot);
-    if (specId == 0)
-	 // === MODO PvP: si pvpSet, consultamos pesos con bonus de resiliencia (spec + 100) ===
-    const uint32 specQuery = specId + (pvpSet ? 100 : 0);
-        return;
 
     // choose type of weapon
     uint32 weaponType = 0;
@@ -3253,8 +3338,14 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool syncWithMaster, bool
             }
             else
             {
-                std::vector<uint32> ids;
-                for (uint32 q = quality; q < ITEM_QUALITY_ARTIFACT; ++q)
+                                std::vector<uint32> ids;
+                bool pvpIdsUsed = false;
+                if (pvpSet)
+                {
+                    ids = QueryPvPItems(bot->GetLevel(), bot->getClass(), slot);
+                    pvpIdsUsed = !ids.empty();
+                }
+                for (uint32 q = quality; !pvpIdsUsed && q < ITEM_QUALITY_ARTIFACT; ++q)
                 {
                     // quality selected from command
                     if (setQuality && q != quality)
@@ -3319,7 +3410,7 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool syncWithMaster, bool
 
                 sLog.outDetail("Bot #%d %s:%d <%s>: %u possible items for slot %d", bot->GetGUIDLow(), bot->GetTeam() == ALLIANCE ? "A" : "H", bot->GetLevel(), bot->GetName(), uint32(ids.size()), slot);
 
-                if (incremental || !progressiveGear)
+                        if (!pvpIdsUsed && (incremental || !progressiveGear))
                 {
                     // sort items based on stat value, ilvl or quality
                     std::sort(ids.begin(), ids.end(), [specId](int a, int b)
@@ -3341,7 +3432,7 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool syncWithMaster, bool
                     if (!progressiveGear)
                         std::reverse(ids.begin(), ids.end());
                 }
-                else if (!ids.empty())
+                else if (!pvpIdsUsed && !ids.empty())
                 {
                     Shuffle(ids);
                 }
@@ -3459,7 +3550,7 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool syncWithMaster, bool
                         continue;
 
                     uint32 newStatValue = sRandomItemMgr.GetLiveStatWeight(bot, newItemId, specId);
-                    if (newStatValue <= 0)
+                    if (!pvpSet && newStatValue <= 0)
                         continue;
 
                     // check if already have reward
@@ -3532,7 +3623,7 @@ void PlayerbotFactory::InitEquipment(bool incremental, bool syncWithMaster, bool
 					// === FIX #2/#4/#5: NUNCA sustituir por algo de menor o igual valor.
 					// Protege el loot de raid/mazmorra ya equipado y rompe el ciclo
 					// "quita pieza buena -> equipa peor -> desencanta la buena". ===
-					if (oldItem && oldStatValue >= newStatValue)
+					if (!pvpSet && oldItem && oldStatValue >= newStatValue)
 					continue;
 
                     // replace grey items right away
@@ -5728,4 +5819,13 @@ void PlayerbotFactory::InitTaxiNodes()
 
         bot->m_taxi.SetTaximaskNode(taxiNodeLevel.Index);
     }
+	
+}
+void PlayerbotFactory::EquipPvPSet(bool pvp)
+{
+    InitEquipment(false, false, false, false, pvp);
+    InitGems();
+    EnchantEquipment();
+    bot->InitStatsForLevel(true);
+    bot->UpdateAllStats();
 }

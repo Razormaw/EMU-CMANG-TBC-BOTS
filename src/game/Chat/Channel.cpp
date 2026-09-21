@@ -676,15 +676,30 @@ void Channel::Say(Player* player, const char* text, uint32 lang)
     else
         SendMessage(data, (moderator ? ObjectGuid() : guid));
 	
-	    // === HOOK TABERNA: capturar cuando un JUGADOR REAL habla ===
-		#ifdef BUILD_PLAYERBOTS
-		if (player && !player->GetPlayerbotAI() && m_name == "taberna")
-        sTabernaConvMgr.OnPlayerSpeaks(player, this, text);
-		#else
-		// Cuando BUILD_PLAYERBOTS no está definido, permitir todos los jugadores
-		if (player && m_name == "taberna")
-        sTabernaConvMgr.OnPlayerSpeaks(player, this, text);
-		#endif
+	    // =====================================================================
+// HOOK TABERNA + COMERCIO: captura mensajes de JUGADORES REALES
+// =====================================================================
+#ifdef BUILD_PLAYERBOTS
+    if (player && !player->GetPlayerbotAI())
+    {
+        // Nombre del canal en minusculas (para comparar sin importar mayusculas)
+        std::string chanName = m_name;
+        for (char& c : chanName) c = (char)tolower((unsigned char)c);
+
+        // --- TABERNA ---
+        if (chanName == "taberna")
+        {
+            sTabernaConvMgr.OnPlayerSpeaks(player, this, text);
+        }
+        // --- COMERCIO ---
+        // El canal se llama "Comercio - <Ciudad>" o "Trade - <City>" segun idioma
+        else if (chanName.find("comercio") != std::string::npos ||
+                 chanName.find("trade")    != std::string::npos)
+        {
+            sTabernaConvMgr.OnTradePlayerSpeaks(player, this, text);
+        }
+    }
+#endif
 }
 
 void Channel::Invite(Player* player, const char* targetName)

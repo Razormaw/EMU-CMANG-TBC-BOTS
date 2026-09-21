@@ -1499,15 +1499,19 @@ void RandomItemMgr::BuildItemInfoCache()
 uint32 RandomItemMgr::CalculateStatWeight(uint8 playerclass, uint8 spec, ItemPrototype const* proto, ItemSpecType& itSpec)
 {
 	
-	        // === PATCH A v2 + MODO PvP ===
-    const bool pvpMode = (spec >= 100);
-    const uint8 realSpec = pvpMode ? (uint8)(spec - 100) : spec;
-
+	    bool pvpMode = false;
+    if (spec >= 100)
+    {
+        pvpMode = true;
+        spec -= 100;
+    }
     uint32 resilienceTotal = 0;
     for (uint8 i = 0; i < MAX_ITEM_PROTO_STATS; ++i)
-        if (proto->ItemStat[i].ItemStatValue > 0 && proto->ItemStat[i].ItemStatType == 35)
+        if (proto->ItemStat[i].ItemStatValue > 0 && proto->ItemStat[i].ItemStatType == ITEM_MOD_RESILIENCE_RATING)
             resilienceTotal += proto->ItemStat[i].ItemStatValue;
-	
+    if (!pvpMode && resilienceTotal)
+        return 0;
+		
 	uint32 specType = ITEM_SPEC_NONE;
     uint32 statWeight = 0;
     uint32 spellPower = 0;
@@ -2182,9 +2186,8 @@ uint32 RandomItemMgr::CalculateStatWeight(uint8 playerclass, uint8 spec, ItemPro
     if (pvpMode && resilienceTotal)
         statWeight += statWeight / 2 + resilienceTotal * 10;   // constante ajustable
     // === FIN BONUS ===
-        return 0;                       // PvE: equipo PvP fuera
-    // === FIN ===
-
+	
+	
     return statWeight;
 }
 
@@ -4049,13 +4052,31 @@ float RandomItemMgr::GetItemRarity(uint32 itemId)
 }
 
 // === PATCH UPGRADE-GUARD: implementaciones ===
-bool RandomItemMgr::IsUpgradeFor(Player* bot, ItemPrototype const* proto, uint8 slot, uint8 specId)
+	
+	bool RandomItemMgr::IsUpgradeFor(Player* bot, ItemPrototype const* proto, uint8 slot, uint8 specId)
 {
     if (!bot || !proto)
         return false;
 
+    if (proto->Class != ITEM_CLASS_WEAPON && proto->Class != ITEM_CLASS_ARMOR)
+        return false;
+
+    if (bot->CanUseItem(proto) != EQUIP_ERR_OK)
+        return false;
+
+    if (proto->RequiredLevel > bot->GetLevel())
+        return false;
+
+    uint32 classMask = 1 << (bot->getClass() - 1);
+    if (proto->AllowableClass && !(proto->AllowableClass & classMask))
+        return false;
+
+    if (proto->AllowableRace && !(proto->AllowableRace & bot->getRaceMask()))
+        return false;
+
     ItemSpecType newSpec;
     uint32 newWeight = CalculateStatWeight(bot->getClass(), specId, proto, newSpec);
+
     if (!newWeight)
         return false;
 
@@ -4064,8 +4085,9 @@ bool RandomItemMgr::IsUpgradeFor(Player* bot, ItemPrototype const* proto, uint8 
         ItemSpecType curSpec;
         uint32 curWeight = CalculateStatWeight(bot->getClass(), specId, current->GetProto(), curSpec);
         if (curWeight >= newWeight)
-            return false;   // nunca cambiar hacia abajo o lateral
+            return false;
     }
+
     return true;
 }
 
@@ -4074,25 +4096,64 @@ bool RandomItemMgr::IsUpgradeAnySlot(Player* bot, ItemPrototype const* proto, ui
     if (!bot || !proto)
         return false;
 
-    ItemSpecType newSpec;
-    uint32 newWeight = CalculateStatWeight(bot->getClass(), specId, proto, newSpec);
-    if (!newWeight)
+    if (proto->Class != ITEM_CLASS_WEAPON && proto->Class != ITEM_CLASS_ARMOR)
         return false;
 
-    uint32 curBest = 0;
-    for (uint8 s = EQUIPMENT_SLOT_START; s < EQUIPMENT_SLOT_END; ++s)
-    {
-        if (Item* it = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, s))
-        {
-            if (it->GetProto()->InventoryType == proto->InventoryType)
-            {
-                ItemSpecType curSpec;
-                uint32 cw = CalculateStatWeight(bot->getClass(), specId, it->GetProto(), curSpec);
-                if (cw > curBest)
-                    curBest = cw;
-            }
-        }
-    }
-    return newWeight > curBest;
+    if (bot->CanUseItem(proto) != EQUIP_ERR_OK)
+        return false;
+
+    if (proto->RequiredLevel > bot->GetLevel())
+        return false;
+
+    uint32 classMask = 1 << (bot->getClass() - 1);
+    if (proto->AllowableClass && !(proto->AllowableClass & classMask))
+        return false;
+
+    if (proto->AllowableRace && !(proto->AllowableRace & bot->getRaceMask()))
+        return false;
+
+    uint8 slot = GetSlotForItem(proto);
+    if (slot >= EQUIPMENT_SLOT_END)
+        return false;
+
+    return IsUpgradeFor(bot, proto, slot, specId);
 }
+
+uint8 RandomItemMgr::GetSlotForItem(ItemPrototype const* proto)
+{
+    if (!proto)
+        return EQUIPMENT_SLOT_END;
+
+    switch (proto->InventoryType)
+    {
+        case INVTYPE_HEAD:          return EQUIPMENT_SLOT_HEAD;
+        case INVTYPE_NECK:          return EQUIPMENT_SLOT_NECK;
+        case INVTYPE_SHOULDERS:     return EQUIPMENT_SLOT_SHOULDERS;
+        case INVTYPE_BODY:          return EQUIPMENT_SLOT_BODY;
+        case INVTYPE_CHEST:
+        case INVTYPE_ROBE:          return EQUIPMENT_SLOT_CHEST;
+        case INVTYPE_WAIST:         return EQUIPMENT_SLOT_WAIST;
+        case INVTYPE_LEGS:          return EQUIPMENT_SLOT_LEGS;
+        case INVTYPE_FEET:          return EQUIPMENT_SLOT_FEET;
+        case INVTYPE_WRISTS:        return EQUIPMENT_SLOT_WRISTS;
+        case INVTYPE_HANDS:         return EQUIPMENT_SLOT_HANDS;
+        case INVTYPE_FINGER:        return EQUIPMENT_SLOT_FINGER1;
+        case INVTYPE_TRINKET:       return EQUIPMENT_SLOT_TRINKET1;
+        case INVTYPE_WEAPON:        return EQUIPMENT_SLOT_MAINHAND;
+        case INVTYPE_SHIELD:        return EQUIPMENT_SLOT_OFFHAND;
+        case INVTYPE_RANGED:        return EQUIPMENT_SLOT_RANGED;
+        case INVTYPE_CLOAK:         return EQUIPMENT_SLOT_BACK;
+        case INVTYPE_2HWEAPON:      return EQUIPMENT_SLOT_MAINHAND;
+        case INVTYPE_TABARD:        return EQUIPMENT_SLOT_TABARD;
+        case INVTYPE_WEAPONMAINHAND: return EQUIPMENT_SLOT_MAINHAND;
+        case INVTYPE_WEAPONOFFHAND:
+        case INVTYPE_HOLDABLE:      return EQUIPMENT_SLOT_OFFHAND;
+        case INVTYPE_AMMO:          return EQUIPMENT_SLOT_END;    // flechas/balas no se equipan en slot
+        case INVTYPE_THROWN:        return EQUIPMENT_SLOT_RANGED; // lanzamiento va en el slot ranged
+        case INVTYPE_RANGEDRIGHT:   return EQUIPMENT_SLOT_RANGED;
+        case INVTYPE_RELIC:         return EQUIPMENT_SLOT_RANGED;
+        default:                    return EQUIPMENT_SLOT_END;
+    }
+}
+
 // === FIN PATCH UPGRADE-GUARD ===
